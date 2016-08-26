@@ -851,6 +851,18 @@ exponent. AND DIGEST""")
             lin_ref = 1
             ref_lines = []
             TasaIVA = "19.00"
+            folio = self.get_folio(rec)
+            if dte_service == 'SIIHOMO' and isinstance(n_atencion, unicode):
+                ref_line = {}
+                ref_line = collections.OrderedDict()
+                ref_line['NroLinRef'] = lin_ref
+                count = count +1
+                ref_line['TpoDocRef'] = "SET"
+                ref_line['FolioRef'] = folio
+                ref_line['FchRef'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
+                ref_line['RazonRef'] = "CASO "+n_atencion+"-" + str(rec.sii_batch_number)
+                lin_ref = 2
+                ref_lines.extend([{'Referencia':ref_line}])
             for ref in rec.reference:
                 if ref.sii_referencia_TpoDocRef in ['33','34']:#@TODO Mejorar Búsqueda
                     inv = self.env["account.invoice"].search([('sii_document_number','=',str(ref.origen))])
@@ -902,7 +914,6 @@ exponent. AND DIGEST""")
                 line_number += 1
                 picking_lines.extend([{'Detalle': lines}])
             ted1 = self.get_barcode(rec, dte_service,inv)
-            folio = self.get_folio(rec)
             dte = collections.OrderedDict()
             dte1 = collections.OrderedDict()
             giros_emisor = []
