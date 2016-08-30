@@ -924,7 +924,7 @@ exponent. AND DIGEST""")
             dte['Encabezado']['IdDoc']['TipoDTE'] = 52
             dte['Encabezado']['IdDoc']['Folio'] = folio
             dte['Encabezado']['IdDoc']['FchEmis'] = rec.min_date[:10]
-            if rec.transport_type and rec.transport_type != "0":
+            if rec.transport_type and rec.transport_type not in ['0']:
                 dte['Encabezado']['IdDoc']['TipoDespacho'] = rec.transport_type
             dte['Encabezado']['IdDoc']['IndTraslado'] = rec.move_reason
             dte['Encabezado']['Emisor'] = collections.OrderedDict()
