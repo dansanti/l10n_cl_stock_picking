@@ -754,7 +754,7 @@ exponent. AND DIGEST""")
         result['TED']['DD']['MNT'] = int(round(rec.amount_total))
 
         for line in rec.pack_operation_product_ids:
-            name = line.name or line.product_id.name
+            name = line.product_id.name
             result['TED']['DD']['IT1'] = self._acortar_str(name,40)
             if line.product_id.default_code:
                 result['TED']['DD']['IT1'] = self._acortar_str(name.replace('['+line.product_id.default_code+'] ',''),40)
@@ -885,11 +885,10 @@ exponent. AND DIGEST""")
                     lines['CdgItem'] = collections.OrderedDict()
                     lines['CdgItem']['TpoCodigo'] = 'INT1'
                     lines['CdgItem']['VlrCodigo'] = line.product_id.default_code
-                name = line.name or line.product_id.name
-                #name = line.product_id.name
-                lines['NmbItem'] = self._acortar_str(name,80)
+                lines['NmbItem'] = self._acortar_str(line.product_id.name,80) #
+                lines['DscItem'] = self._acortar_str(line.name, 1000) #descripción más extenza
                 if line.product_id.default_code:
-                    lines['NmbItem'] = self._acortar_str(name.replace('['+line.product_id.default_code+'] ',''),80)
+                    lines['NmbItem'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),80)
                 if not 'qty_done' in line:
                     raise UserError(_('Must add some quantity moved!'))
                 else :
@@ -1069,8 +1068,8 @@ exponent. AND DIGEST""")
         self.sii_message = respuesta
         resp = xmltodict.parse(respuesta)
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == '2':
-        	status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
-        	return status
+            status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
+            return status
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == "EPR":
             self.sii_result = "Proceso"
             if resp['SII:RESPUESTA']['SII:RESP_BODY']['RECHAZADOS'] == "1":

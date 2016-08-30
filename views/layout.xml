@@ -37,7 +37,7 @@
                           </tr>
                           <tr>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Giro:</strong></td>
-                            <td style="border-top:0px !important;padding:4px !important;min-width:500px;max-width:500px;"><span t-field="o.turn_issuer.name"/></td>
+                            <td style="border-top:0px !important;padding:4px !important;min-width:500px;max-width:500px;"><span t-field="o.partner_turn.name"/></td>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Condición de Pago:</strong></td>
                           </tr>
                           <tr>
@@ -92,7 +92,7 @@
                                    <span t-field="l.qty_done"/>
                                    <span t-field="l.product_uom_id"  groups="product.group_uom"/>
                                </td>
-                               <td><span t-field="l.product_id.name"/></td>
+                               <td><span t-field="l.product_id.name"/> <t t-if="l.product_id.name != l.name"><span t-field="l.name"/></t></td>
                                <td class="text-right">
                                    $ <span t-field="l.product_id.list_price"/>
                                </td>
