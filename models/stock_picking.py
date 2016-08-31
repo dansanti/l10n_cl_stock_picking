@@ -166,45 +166,7 @@ class Referencias(models.Model):
     _name = 'stock.picking.referencias'
 
     origen = fields.Char(string="Origin")
-    sii_referencia_TpoDocRef =  fields.Selection(
-        [('801','Orden de Compra'),
-        ('30','Factura'),
-        ('32',' Factura de venta bienes y servicios no afectos o exentos de IVA'),
-        ('35',' Boleta'),
-        ('35',' Boleta'),
-        ('38',' Boleta exenta'),
-        ('45',' Factura de compra'),
-        ('55',' Nota de débito'),
-        ('60',' Nota de crédito'),
-        ('103','Liquidación'),
-        ('40','Liquidación Factura'),
-        ('43','Liquidación-Factura Electrónica'),
-        ('33','Factura Electrónica'),
-        ('34','Factura No Afecta o Exenta Electrónica'),
-        ('39','Boleta Electrónica'),
-        ('41','Boleta Exenta Electrónica'),
-        ('46','Factura de Compra Electrónica.'),
-        ('56','Nota de Débito Electrónica'),
-        ('61','Nota de Crédito Electrónica'),
-        ('50','Guía de Despacho.'),
-        ('52','Guía de Despacho Electrónica'),
-        ('110','Factura de Exportación Electrónica'),
-        ('111','Nota de Débito de Exportación Electrónica'),
-        ('112','Nota de Crédito de Exportación Electrónica'),
-        ('802','Nota de pedido'),
-        ('803','Contrato'),
-        ('804','Resolución'),
-        ('805','Proceso ChileCompra'),
-        ('806','Ficha ChileCompra'),
-        ('807','DUS'),
-        ('808','B/L (Conocimiento de embarque)'),
-        ('809','AWB (Air Will Bill)'),
-        ('810','MIC/DTA'),
-        ('811','Carta de Porte'),
-        ('812','Resolución del SNA donde califica Servicios de Exportación'),
-        ('813','Pasaporte'),
-        ('814','Certificado de Depósito Bolsa Prod. Chile.'),
-        ('815','Vale de Prenda Bolsa Prod. Chile')],
+    sii_referencia_TpoDocRef =  fields.Many2one('sii.document_class',
         string="SII Reference Document Type")
     date = fields.Date(string="Fecha de la referencia")
     stock_picking_id = fields.Many2one('stock.picking', ondelete='cascade',index=True,copy=False,string="Documento")
@@ -286,7 +248,7 @@ class StockMove(models.Model):
         for rec in self:
             if rec.picking_id.reference:
                 for ref in rec.picking_id.reference:
-                    if ref.sii_referencia_TpoDocRef in ['34','33']:# factura venta
+                    if ref.sii_referencia_TpoDocRef.sii_code in ['34','33']:# factura venta
                         inv = self.env['account.invoice'].search([('sii_document_number','=',ref.origen)])
                         for l in inv.invoice_lines:
                             if l.product_id.id == rec.product_id.id:

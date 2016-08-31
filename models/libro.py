@@ -673,7 +673,7 @@ exponent. AND DIGEST""")
             det['FchDocRef'] = referencia.date[:10]
         if rec.reference:
             for r in rec.reference:##reparar para que no sobreescriba
-                det['TpoDocRef'] = r.sii_referencia_TpoDocRef
+                det['TpoDocRef'] = r.sii_referencia_TpoDocRef.sii_code
                 det['FolioDocRef'] = r.origen
                 det['FchDocRef'] = r.date
         return det

@@ -23,7 +23,6 @@
     'name': u'Chile - Sistema de apoyo a la guías de despacho',
     'test': [],
     'data': [
-        'data/sii.document_class.csv',
         'security/ir.model.access.csv',
         'views/dte.xml',
         'views/stock_picking.xml',

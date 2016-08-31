@@ -67,7 +67,7 @@
                                       <span t-if="l.origen" t-field="l.origen"/>
                                   </td>
                                 <td style="border-top:0px !important;padding:4px !important;">
-                                    <span t-if="l.sii_referencia_TpoDocRef" t-field="l.sii_referencia_TpoDocRef"/>
+                                    <span t-if="l.sii_referencia_TpoDocRef" t-field="l.sii_referencia_TpoDocRef.name"/>
                                 </td>
                             </tr>
                           </t>

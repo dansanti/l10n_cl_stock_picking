@@ -864,13 +864,13 @@ exponent. AND DIGEST""")
                 lin_ref = 2
                 ref_lines.extend([{'Referencia':ref_line}])
             for ref in rec.reference:
-                if ref.sii_referencia_TpoDocRef in ['33','34']:#@TODO Mejorar Búsqueda
+                if ref.sii_referencia_TpoDocRef.sii_code in ['33','34']:#@TODO Mejorar Búsqueda
                     inv = self.env["account.invoice"].search([('sii_document_number','=',str(ref.origen))])
                 ref_line = {}
                 ref_line = collections.OrderedDict()
                 ref_line['NroLinRef'] = lin_ref
                 if  ref.sii_referencia_TpoDocRef:
-                    ref_line['TpoDocRef'] = ref.sii_referencia_TpoDocRef
+                    ref_line['TpoDocRef'] = ref.sii_referencia_TpoDocRef.sii_code
                     ref_line['FolioRef'] = ref.origen
                     ref_line['FchRef'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
                     if ref.date:
