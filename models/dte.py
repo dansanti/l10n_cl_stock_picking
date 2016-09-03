@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 from openerp import fields, models, api, _
 from openerp.exceptions import Warning
 from openerp.exceptions import UserError
@@ -869,7 +868,7 @@ exponent. AND DIGEST""")
                 ref_line = {}
                 ref_line = collections.OrderedDict()
                 ref_line['NroLinRef'] = lin_ref
-                if  ref.sii_referencia_TpoDocRef:
+                if  ref.sii_referencia_TpoDocRef and not dte_service == 'SIIHOMO':
                     ref_line['TpoDocRef'] = ref.sii_referencia_TpoDocRef.sii_code
                     ref_line['FolioRef'] = ref.origen
                     ref_line['FchRef'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
@@ -1066,8 +1065,8 @@ exponent. AND DIGEST""")
         self.sii_message = respuesta
         resp = xmltodict.parse(respuesta)
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == '2':
-            status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
-            return status
+        	status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
+        	return status
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == "EPR":
             self.sii_result = "Proceso"
             if resp['SII:RESPUESTA']['SII:RESP_BODY']['RECHAZADOS'] == "1":
