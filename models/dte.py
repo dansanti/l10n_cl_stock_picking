@@ -1028,9 +1028,7 @@ exponent. AND DIGEST""")
         self.xml_validator(envio_dte, 'env')
         result = self.send_xml_file(envio_dte, file_name, company_id)
         for rec in self:
-            rec.write({'sii_xml_response':result['sii_xml_response'], 'sii_send_ident':result['sii_send_ident'], 'sii_result': result['sii_result']})
-            last = rec
-        rec.write({'sii_xml_request':envio_dte})
+            rec.write({'sii_xml_response':result['sii_xml_response'], 'sii_send_ident':result['sii_send_ident'], 'sii_result': result['sii_result'], 'sii_xml_request':envio_dte})
         return {'warning':{'title':_('¡Enviado!'), 'message': _('El Documento ha sido enviado, espere al menos 10s para consultar estado')}}
 
     def _get_send_status(self, track_id, signature_d,token):
