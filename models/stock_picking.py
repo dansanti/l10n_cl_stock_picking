@@ -149,7 +149,8 @@ class StockPicking(models.Model):
                             m.operation_line_tax_ids = l.move_line_tax_ids
                 if not m.price_unit > 0 or not m.name:
                     m.price_unit = m.product_id.lst_price
-                    m.name = m.product_id.name
+                    if not m.name:
+                    	m.name = m.product_id.name
                     m.operation_line_tax_ids = m.product_id.taxes_id # @TODO mejorar asignación
 
 class StockPickingType(models.Model):
@@ -182,7 +183,7 @@ class StockPackOperation(models.Model):
                 vals['price_unit'] = o.price_unit
                 vals['subtotal'] = o.subtotal
                 vals['discount'] = o.discount
-                vals['operation_line_tax_ids'] = o.move_line_tax_ids
+                vals['operation_line_tax_ids'] = o.move_line_tax_ids.ids
 
         super(StockPackOperation,self).create(cr,uid,vals,context=context)
 
@@ -196,8 +197,9 @@ class StockPackOperation(models.Model):
                     rec.discount = l.discount
                     rec.operation_line_tax_ids = l.move_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
+            	if not rec.name:
+            		rec.name = rec.product_id.name
                 rec.price_unit = rec.product_id.lst_price
-                rec.name = rec.product_id.name
                 rec.operation_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     name = fields.Char(string="Nombre")
@@ -257,9 +259,9 @@ class StockMove(models.Model):
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
-                _logger.info("innn")
                 rec.price_unit = rec.product_id.lst_price
-                rec.name = rec.product_id.name
+                if not rec.name:
+                	rec.name = rec.product_id.name
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
