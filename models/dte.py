@@ -935,7 +935,7 @@ exponent. AND DIGEST""")
             dte['Encabezado']['Emisor']['item'] = giros_emisor # giros de la compañia - codigos
             # todo: <CdgSIISucur>077063816</CdgSIISucur> codigo de sucursal
             dte['Encabezado']['Emisor']['DirOrigen'] = rec.company_id.street
-            dte['Encabezado']['Emisor']['CmnaOrigen'] = rec.company_id.state_id.name
+            dte['Encabezado']['Emisor']['CmnaOrigen'] = rec.company_id.city_id.name
             dte['Encabezado']['Emisor']['CiudadOrigen'] = rec.company_id.city
             dte['Encabezado']['Receptor'] = collections.OrderedDict()
             dte['Encabezado']['Receptor']['RUTRecep'] = self.format_vat(rec.partner_id.vat)
@@ -944,7 +944,7 @@ exponent. AND DIGEST""")
                 raise UserError(_('Seleccione giro del asociado'))
             dte['Encabezado']['Receptor']['GiroRecep'] = rec.partner_turn.name[:40]
             dte['Encabezado']['Receptor']['DirRecep'] = rec.partner_id.street + ' ' + (rec.partner_id.street2 or '')
-            dte['Encabezado']['Receptor']['CmnaRecep'] = rec.partner_id.state_id.name
+            dte['Encabezado']['Receptor']['CmnaRecep'] = rec.partner_id.city_id.name
             dte['Encabezado']['Receptor']['CiudadRecep'] = rec.partner_id.city
             dte['Encabezado']['Transporte'] = collections.OrderedDict()
             if rec.patente:
@@ -965,7 +965,7 @@ exponent. AND DIGEST""")
                     dte['Encabezado']['Transporte']['Chofer']['RUTChofer'] = self.format_vat(rec.chofer.vat)
                     dte['Encabezado']['Transporte']['Chofer']['NombreChofer'] = rec.chofer.name[:30]
             dte['Encabezado']['Transporte']['DirDest'] = (rec.partner_id.street or '')+ ' '+ (rec.partner_id.street2 or '')
-            dte['Encabezado']['Transporte']['CmnaDest'] = rec.partner_id.state_id.name or ''
+            dte['Encabezado']['Transporte']['CmnaDest'] = rec.partner_id.city_id.name or ''
             dte['Encabezado']['Transporte']['CiudadDest'] = rec.partner_id.city or ''
             #@TODO SUb Area Aduana
             dte['Encabezado']['Totales'] = collections.OrderedDict()
