@@ -259,9 +259,9 @@ class StockMove(models.Model):
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
-                rec.price_unit = rec.product_id.lst_price
                 if not rec.name:
-                	rec.name = rec.product_id.name
+                    rec.name = rec.product_id.name
+                rec.price_unit = rec.product_id.lst_price
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
