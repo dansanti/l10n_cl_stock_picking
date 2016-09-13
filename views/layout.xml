@@ -217,11 +217,30 @@
                       </div>
                       <div class="row">
                         <h2 class="pull-right"></h2>
-                        <!--<h3 class="pull-right" style="margin-right:30px;">CEDIBLE CON SU FACTURA</h3>-->
+                        <h3 class="pull-right" style="margin-right:30px;" t-if="cedible">CEDIBLE CON SU FACTURA</h3>
                       </div>
                    </div>
 
                 </div>
             </xpath>
           </template>
+          <template id="stock_picking_cedible">
+            <t t-call="report.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="stock.report_picking" >
+                      <t t-set="cedible" t-value="True" />
+                  </t>
+                </t>
+              </t>
+          </template>
+          <report
+                    string="Print Cedible"
+                    id="action_print_stock_cedible"
+                    model="stock.picking"
+                    report_type="qweb-pdf"
+                    name="l10n_cl_stock_picking.stock_picking_cedible"
+                    file="l10n_cl_stock_picking.report_stock_picking_cedible"
+                    attachment_use="True"
+                    attachment="(object.state in ('open','paid')) and ('CED_'+(object.number or '').replace('/','')+'.pdf')"
+          />
 </openerp>

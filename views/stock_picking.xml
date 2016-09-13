@@ -25,7 +25,7 @@
                       <field name="partner_turn" domain="[('partner_ids', '=', partner_id)]" options="{'no_create': True}"/>
                       <field name="currency_id"/>
                 </field>
-                
+
                 <field name="origin" position="after">
                   <field name="contact_id" />
                 </field>
