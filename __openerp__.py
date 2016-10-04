@@ -10,7 +10,8 @@
         'delivery',
         'l10n_cl_invoice',
         'l10n_cl_base_rut',
-        'l10n_cl_partner_activities'
+        'l10n_cl_partner_activities',
+        'l10n_cl_dte',
         ],
     'description': u'''
 \n\nMódulo de Guías de Despacho de la localización Chilena.\n\n\nIncluye:\n
@@ -30,5 +31,5 @@
         'views/libro_guias.xml',
         'wizard/masive_send_dte.xml',
     ],
-    'version': '9.0.1.1',
+    'version': '9.0.2.0',
 }

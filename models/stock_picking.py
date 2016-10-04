@@ -89,6 +89,12 @@ class StockPicking(models.Model):
         'Giro',
         store=True,
         readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
+
+    activity_description = fields.Many2one(
+        'sii.activity.description',
+        'Giro',
+        related="partner_id.activity_description",
+        readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
     sii_document_number = fields.Char(
         string='Document Number',
         copy=False,
@@ -110,23 +116,23 @@ class StockPicking(models.Model):
     use_documents = fields.Boolean(
         string='Use Documents?',
         readonly=True)
-    reference =fields.One2many('stock.picking.referencias','stock_picking_id', readonly=True, states={'draft': [('readonly', False)]}, )
+    reference =fields.One2many('stock.picking.referencias','stock_picking_id', readonly=False, states={'done':[('readonly',True)]})
     transport_type = fields.Selection(
         [('2','Despacho por cuenta de empresa'),('1','Despacho por cuenta del cliente'),('3','Despacho Externo'),('0','Sin Definir')],
         string="Tipo de Despacho",
         required=True,
         default="2",
-        readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
+        readonly=False, states={'done':[('readonly',True)]})
     move_reason = fields.Selection(
         [('1','Operación constituye venta'),('2','Ventas por efectuar'), ('3','Consignaciones'),('4','Entrega Gratuita'),('5','Traslados Internos'),('6','Otros traslados no venta'),('7','Guía de Devolución'),('8','Traslado para exportación'),('9','Ventas para exportación')],
         string='Razón del traslado',
         default="1",
         required=True,
-        readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
-    vehicle = fields.Many2one('fleet.vehicle', string="Vehículo",readonly=True, states={'draft': [('readonly', False)]},)
-    chofer= fields.Many2one('res.partner', string="Chofer",readonly=True, states={'draft': [('readonly', False)]},)
-    patente = fields.Char(string="Patente",readonly=True, states={'draft': [('readonly', False)]},)
-    contact_id = fields.Many2one('res.partner',string="Contacto",readonly=True, states={'draft': [('readonly', False)]},)
+        readonly=False, states={'done':[('readonly',True)]})
+    vehicle = fields.Many2one('fleet.vehicle', string="Vehículo", readonly=False, states={'done':[('readonly',True)]})
+    chofer= fields.Many2one('res.partner', string="Chofer", readonly=False, states={'done':[('readonly',True)]})
+    patente = fields.Char(string="Patente", readonly=False, states={'done':[('readonly',True)]})
+    contact_id = fields.Many2one('res.partner',string="Contacto", readonly=False, states={'done':[('readonly',True)]})
 
     @api.onchange('vehicle')
     def _setChofer(self):
@@ -178,9 +184,7 @@ class StockPackOperation(models.Model):
     def create(self, cr, uid, vals,context=None):
         picking_id = self.pool.get('stock.picking').browse(cr,uid,vals['picking_id'],context=context)
         for o in picking_id.move_lines:
-            if vals['product_id'] == o.product_id.id:
-                vals['name'] = o.name
-                vals['price_unit'] = o.price_unit
+            if vals['product_id'] == o.product_id.id and o.name == vals['name']:
                 vals['subtotal'] = o.subtotal
                 vals['discount'] = o.discount
                 vals['operation_line_tax_ids'] = o.move_line_tax_ids.ids
@@ -192,7 +196,7 @@ class StockPackOperation(models.Model):
     def _setValues(self):
         for rec in self:
             for l in rec.picking_id.move_lines_related:
-                if l.product_id.id == rec.product_id.id:
+                if l.product_id.id == rec.product_id.id and l.name == rec.name:
                     rec.price_unit = l.price_unit
                     rec.discount = l.discount
                     rec.operation_line_tax_ids = l.move_line_tax_ids
@@ -259,9 +263,9 @@ class StockMove(models.Model):
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
-                if not rec.name:
-                    rec.name = rec.product_id.name
                 rec.price_unit = rec.product_id.lst_price
+                if not rec.name:
+                	rec.name = rec.product_id.name
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')

@@ -22,7 +22,8 @@
                     <field name="sii_document_number" invisible="1"/>
                 </form>
                 <field name="partner_id" position="after">
-                      <field name="partner_turn" domain="[('partner_ids', '=', partner_id)]" options="{'no_create': True}"/>
+                    <field name="activity_description" />
+                      <field name="partner_turn" domain="[('partner_ids', '=', partner_id)]" options="{'no_create': True}" invisible="True"/>
                       <field name="currency_id"/>
                 </field>
 
