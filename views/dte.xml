@@ -16,7 +16,7 @@
                     <page string="Electronic Document" name="electronic_document" >
                         <header>
                             <button string="Download XML" type="object"  name="get_xml_file"  attrs="{'invisible':['|',('state', 'not in', ['done']),('sii_result','in',['','NoEnviado'])]}"/>
-                            <button string="Send XML" type="object" class="oe_highlight" name="do_dte_send_picking" />
+                            <button string="Send XML" type="object" class="oe_highlight" name="do_dte_send_picking" attrs="{'invisible':['|',('state', 'not in', ['done']),('sii_result', 'not in', ['NoEnviado'])]}"/>
                             <button string="Ask for DTE" type="object" class="oe_highlight" name="ask_for_dte_status" attrs="{'invisible':['|',('state', 'not in', ['done']),('sii_result','in',['','NoEnviado'])]}"/>
                             <field name='sii_result' widget="statusbar"/>
                         </header>

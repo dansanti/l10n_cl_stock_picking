@@ -413,13 +413,15 @@ version="1.0">
         return fulldoc
 
     def get_digital_signature_pem(self, comp_id):
-        obj = self.responsable_envio
+        obj = user = self[0].responsable_envio
+        if not obj:
+            obj = user = self.env.user
         if not obj.cert:
-            obj = self.env['res.company'].browse([comp_id.id])
-            if not obj.cert:
-                obj = self.env['res.users'].search(domain=[("authorized_users_ids","=", self.responsable_envio.id)])
-            if not obj.cert or not self.responsable_envio.id in obj.authorized_users_ids.ids:
-                return False
+            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            if not obj or not user.id in obj.authorized_users_ids.ids:
+                obj = self.env['res.company'].browse([comp_id.id])
+                if not obj.cert or not user.id in obj.authorized_users_ids.ids:
+                    return False
         signature_data = {
             'subject_name': obj.name,
             'subject_serial_number': obj.subject_serial_number,
@@ -430,13 +432,15 @@ version="1.0">
         return signature_data
 
     def get_digital_signature(self, comp_id):
-        obj = self.responsable_envio
+        obj = user = self[0].responsable_envio
+        if not obj:
+            obj = user = self.env.user
         if not obj.cert:
-            obj = self.env['res.company'].browse([comp_id.id])
-            if not obj.cert:
-                obj = self.env['res.users'].search(domain=[("authorized_users_ids","=", self.responsable_envio.id)])
-            if not obj.cert or not self.responsable_envio.id in obj.authorized_users_ids.ids:
-                return False
+            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            if not obj or not user.id in obj.authorized_users_ids.ids:
+                obj = self.env['res.company'].browse([comp_id.id])
+                if not obj.cert or not user.id in obj.authorized_users_ids.ids:
+                    return False
         signature_data = {
             'subject_name': obj.name,
             'subject_serial_number': obj.subject_serial_number,
@@ -526,9 +530,9 @@ version="1.0">
      @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
      @version: 2016-05-01
     '''
-    def get_folio(self, rec):
+    def get_folio(self):
         # saca el folio directamente de la secuencia
-        return int(rec.sii_document_number)
+        return int(self.sii_document_number)
 
     '''
          Se Retorna el CAF que corresponda a la secuencia, independiente del estado
@@ -536,9 +540,10 @@ version="1.0">
          Deja fuera Los del antiguo CAF, que son válidos aún, porque no se han enviado; y arroja Error
          de que la secuencia no está en el rango del CAF
     '''
-    def get_caf_file(self, rec):
-        caffiles = rec.picking_type_id.sequence_id.dte_caf_ids
-        folio = self.get_folio(rec)
+    def get_caf_file(self):
+        caffiles = self.picking_type_id.sequence_id.dte_caf_ids
+        folio = self.get_folio()
+        _logger.info(folio)
         for caffile in caffiles:
             post = base64.b64decode(caffile.caf_file)
             post = xmltodict.parse(post.replace(
@@ -551,25 +556,24 @@ version="1.0">
             raise UserError(_('''There is no CAF file available or in use \
 for this Document. Please enable one.'''))
 
-        if folio > folio_final:
+        if folio > int(folio_final):
             msg = '''El folio de este documento: {} está fuera de rango \
 del CAF vigente (desde {} hasta {}). Solicite un nuevo CAF en el sitio \
 www.sii.cl'''.format(folio, folio_inicial, folio_final)
-            #_logger.info(msg)
             # defino el status como "spent"
             caffile.status = 'spent'
             raise UserError(_(msg))
         return False
 
-    '''
-    Funcion para reformateo del vat desde modo Odoo (dos digitos pais sin guion)
-    a valor sin puntuacion con guion
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2016-05-01
-    '''
     def format_vat(self, value):
-        return value[2:10] + '-' + value[10:]
-
+        ''' Se Elimina el 0 para prevenir problemas con el sii, ya que las muestras no las toma si va con
+        el 0 , y tambien internamente se generan problemas'''
+        if not value or value=='' or value == 0:
+            value ="CL666666666"
+            #@TODO opción de crear código de cliente en vez de rut genérico
+        rut = value[:10] + '-' + value[10:]
+        rut = rut.replace('CL0','').replace('CL','')
+        return rut
 
     '''
     Funcion creacion de imagen pdf417 basada en biblioteca elaphe
@@ -723,14 +727,18 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             c += 1
         return cadena
 
-    #@api.model
-    #def do_new_transfer(self):
-     #   for s in self:
-      #      if s.picking_type_id.code in ['outgoing', 'internal']: # @TODO diferenciar si es de salida o entrada para internal
-       #         s.responsable_envio = self.env.user.id
-        #        s.sii_result = 'NoEnviado'
-         #       self.timbrar()
-        #super(stock_picking,self).do_new_transfer()
+    @api.multi
+    def do_new_transfer(self):
+        for s in self:
+            if not s.sii_document_number and s.picking_type_id.sequence_id.is_dte:
+                s.sii_document_number = int(s.name)
+                document_number = (s.picking_type_id.sii_document_class_id.doc_code_prefix or '') + s.sii_document_number
+                s.name = document_number
+            if s.picking_type_id.code in ['outgoing', 'internal']: # @TODO diferenciar si es de salida o entrada para internal
+                s.responsable_envio = self.env.user.id
+                s.sii_result = 'NoEnviado'
+                self._timbrar()
+        super(stock_picking,self).do_new_transfer()
 
     @api.multi
     def do_dte_send_picking(self, n_atencion=False):
@@ -748,31 +756,136 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                                     'tipo_trabajo':'envio',
                                     'n_atencion': n_atencion
                                     })
+    def _giros_emisor(self):
+        giros_emisor = []
+        for turn in self.company_id.company_activities_ids:
+            giros_emisor.extend([{'Acteco': turn.code}])
+        return giros_emisor
+
+    def _id_doc(self, taxInclude=False, MntExe=0):
+        IdDoc= collections.OrderedDict()
+        IdDoc['TipoDTE'] = self.picking_type_id.sii_document_class_id.sii_code
+        IdDoc['Folio'] = self.get_folio()
+        IdDoc['FchEmis'] = self.min_date[:10]
+        if self.transport_type and self.transport_type not in ['0']:
+            IdDoc['TipoDespacho'] = self.transport_type
+        IdDoc['IndTraslado'] = self.move_reason
+        #if self.print_ticket:
+        #    IdDoc['TpoImpresion'] = "N" #@TODO crear opcion de ticket
+        if taxInclude and MntExe == 0 :
+        	IdDoc['MntBruto'] = 1
+        #IdDoc['FmaPago'] = self.forma_pago or 1
+        #IdDoc['FchVenc'] = self.date_due or datetime.strftime(datetime.now(), '%Y-%m-%d')
+        return IdDoc
+
+    def _emisor(self):
+        Emisor= collections.OrderedDict()
+        Emisor['RUTEmisor'] = self.format_vat(self.company_id.vat)
+        Emisor['RznSoc'] = self.company_id.partner_id.name
+        Emisor['GiroEmis'] = self._acortar_str(self.company_id.activity_description.name, 80)
+        Emisor['Telefono'] = self.company_id.phone or ''
+        Emisor['CorreoEmisor'] = self.company_id.dte_email
+        Emisor['item'] = self._giros_emisor()
+        #@TODO: <CdgSIISucur>077063816</CdgSIISucur> codigo de sucursal
+        # no obligatorio si no hay sucursal, pero es un numero entregado
+        # por el SII para cada sucursal.
+        # este deberia agregarse al "punto de venta" el cual ya esta
+        Emisor['DirOrigen'] = self.company_id.street + ' ' +(self.company_id.street2 or '')
+        Emisor['CmnaOrigen'] = self.company_id.city_id.name or ''
+        Emisor['CiudadOrigen'] = self.company_id.city or ''
+        return Emisor
+
+    def _receptor(self):
+        Receptor = collections.OrderedDict()
+        if not self.partner_id.vat:
+            raise UserError("Debe Ingresar RUT Receptor")
+        Receptor['RUTRecep'] = self.format_vat(self.partner_id.vat)
+        Receptor['RznSocRecep'] = self._acortar_str(self.partner_id.name, 100)
+        if not self.activity_description:
+            raise UserError(_('Seleccione giro del partner'))
+        Receptor['GiroRecep'] = self._acortar_str(self.activity_description.name, 40)
+        if self.partner_id.phone:
+            Receptor['Contacto'] = self.partner_id.phone
+        if self.partner_id.dte_email:
+            Receptor['CorreoRecep'] = self.partner_id.dte_email
+        Receptor['DirRecep'] = self.partner_id.street+ ' ' + (self.partner_id.street2 or '')
+        Receptor['CmnaRecep'] = self.partner_id.city_id.name
+        Receptor['CiudadRecep'] = self.partner_id.city
+        return Receptor
+
+    def _transporte(self):
+        Transporte = collections.OrderedDict()
+        if self.patente:
+            Transporte['Patente'] = self.patente[:8]
+        elif self.vehicle:
+            Transporte['Patente'] = self.vehicle.matricula or ''
+        if self.transport_type in ['2','3'] and self.chofer:
+            if not self.chofer.vat:
+                raise UserError("Debe llenar los datos del chofer")
+            if self.transport_type == '2':
+                Transporte['RUTTrans'] = self.format_vat(self.company_id.vat)
+            else:
+                if not self.carrier_id.partner_id.vat:
+                    raise UserError("Debe especificar el RUT del transportista, en su ficha de partner")
+                Transporte['RUTTrans'] = self.format_vat(self.carrier_id.partner_id.vat)
+            if self.chofer:
+                Transporte['Chofer'] = collections.OrderedDict()
+                Transporte['Chofer']['RUTChofer'] = self.format_vat(self.chofer.vat)
+                Transporte['Chofer']['NombreChofer'] = self.chofer.name[:30]
+        Transporte['DirDest'] = (self.partner_id.street or '')+ ' '+ (self.partner_id.street2 or '')
+        Transporte['CmnaDest'] = self.partner_id.state_id.name or ''
+        Transporte['CiudadDest'] = self.partner_id.city or ''
+        #@TODO SUb Area Aduana
+        return Transporte
+
+    def _totales(self, MntExe=0, no_product=False, taxInclude=False):
+        Totales = collections.OrderedDict()
+        IVA ="19"
+        for line in self.pack_operation_product_ids:
+            if line.operation_line_tax_ids:
+                for t in line.operation_line_tax_ids:
+                    IVA = t.amount
+        Totales['MntNeto'] = int(round(self.amount_untaxed, 0))
+        Totales['TasaIVA'] = round(IVA,2)
+        Totales['IVA'] = int(round(self.amount_tax, 0))
+
+        monto_total = int(round(self.amount_total, 0))
+        Totales['MntTotal'] = monto_total
+        return Totales
+
+    def _encabezado(self, MntExe=0, no_product=False, taxInclude=False):
+        Encabezado = collections.OrderedDict()
+        Encabezado['IdDoc'] = self._id_doc(taxInclude, MntExe)
+        Encabezado['Emisor'] = self._emisor()
+        Encabezado['Receptor'] = self._receptor()
+        Encabezado['Transporte'] = self._transporte()
+        Encabezado['Totales'] = self._totales(MntExe, no_product)
+        return Encabezado
 
     @api.multi
-    def get_barcode(self, dte_service, inv=False):
+    def get_barcode(self, no_product=False):
         ted = False
-        folio = self.get_folio(self)
         result['TED']['DD']['RE'] = self.format_vat(self.company_id.vat)
-        result['TED']['DD']['TD'] = 52
-        result['TED']['DD']['F']  = folio
+        result['TED']['DD']['TD'] = self.picking_type_id.sii_document_class_id.sii_code
+        result['TED']['DD']['F']  = self.get_folio()
         result['TED']['DD']['FE'] = self.min_date[:10]
         if not self.partner_id.vat:
             raise UserError(_("Fill Partner VAT"))
         result['TED']['DD']['RR'] = self.format_vat(self.partner_id.vat)
         result['TED']['DD']['RSR'] = self._acortar_str(self.partner_id.name,40)
         result['TED']['DD']['MNT'] = int(round(self.amount_total))
-
+        if no_product:
+            result['TED']['DD']['MNT'] = 0
         for line in self.pack_operation_product_ids:
-            name = line.product_id.name
-            result['TED']['DD']['IT1'] = self._acortar_str(name,40)
+            result['TED']['DD']['IT1'] = self._acortar_str(line.product_id.name,40)
             if line.product_id.default_code:
-                result['TED']['DD']['IT1'] = self._acortar_str(name.replace('['+line.product_id.default_code+'] ',''),40)
+                result['TED']['DD']['IT1'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),40)
             break
-        resultcaf = self.get_caf_file(self)
 
+        resultcaf = self.get_caf_file()
         result['TED']['DD']['CAF'] = resultcaf['AUTORIZACION']['CAF']
         dte = result['TED']['DD']
+        dicttoxml.set_debug(False)
         ddxml = '<DD>'+dicttoxml.dicttoxml(
             dte, root=False, attr_type=False).replace(
             '<key name="@version">1.0</key>','',1).replace(
@@ -781,10 +894,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             ' algoritmo="SHA1withRSA">').replace(
             '<key name="#text">','').replace(
             '</key>','').replace('<CAF>','<CAF version="1.0">')+'</DD>'
-        ###### con esta funcion fuerzo la conversion a iso-8859-1
         ddxml = self.convert_encoding(ddxml, 'utf-8')
-        # ahora agarro la clave privada y ya tengo los dos elementos
-        # que necesito para firmar
         keypriv = (resultcaf['AUTORIZACION']['RSASK']).encode(
             'latin-1').replace('\t','')
         keypub = (resultcaf['AUTORIZACION']['RSAPUBK']).encode(
@@ -792,15 +902,14 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         #####
         ## antes de firmar, formatear
         root = etree.XML( ddxml )
-        # funcion de remover indents en el ted y formateo xml
-        # ddxml = self.remove_indents(
-        #     (etree.tostring(root, pretty_print=True)))
         ##
+        # formateo sin remover indents
         ddxml = etree.tostring(root)
         timestamp = self.time_stamp()
         ddxml = ddxml.replace('2014-04-24T12:02:20', timestamp)
         frmt = self.signmessage(ddxml, keypriv, keypub)['firma']
-        ted = ('''<TED version="1.0">{}<FRMT algoritmo="SHA1withRSA">{}\
+        ted = (
+            '''<TED version="1.0">{}<FRMT algoritmo="SHA1withRSA">{}\
 </FRMT></TED>''').format(ddxml, frmt)
         root = etree.XML(ted)
         self.sii_barcode = ted
@@ -811,55 +920,80 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             image.save(barcodefile,'PNG')
             data = barcodefile.getvalue()
             self.sii_barcode_img = base64.b64encode(data)
-        ted  = ted + '<TmstFirma>{}</TmstFirma>'.format(timestamp)
+        ted  += '<TmstFirma>{}</TmstFirma>'.format(timestamp)
         return ted
 
-    def _timbrar(self, n_atencion=None):
-        total = 0
-        subtotal = 0
-        try:
-            signature_d = self.get_digital_signature(self.company_id)
-        except:
-            raise UserError(_('''There is no Signer Person with an \
-        authorized signature for you in the system. Please make sure that \
-        'user_signature_key' module has been installed and enable a digital \
-        signature, for you or make the signer to authorize you to use his \
-        signature.'''))
-        certp = signature_d['cert'].replace(
-            BC, '').replace(EC, '').replace('\n', '')
-        dte_service = self.company_id.dte_service_provider
+    def _picking_lines(self):
         line_number = 1
         picking_lines = []
         no_product = False
-        lines = self.pack_operation_product_ids
-        inv = False
-        lin_dr = 1
-        dr_lines = []
-        if inv and 'global_discount' in inv and inv.global_discount:# or inv.global_self:
-            dr_line = {}
-            dr_line = collections.OrderedDict()
-            dr_line['NroLinDR'] = lin_dr
-            dr_line['TpoMov'] = 'D'
-            if inv.global_discount_detail:
-                dr_line['GlosaDR'] = inv.global_discount_detail
-            disc_type = "%"
-            ValorDR = round((inv.global_discount * 100),2)
-            if inv.global_discount_type == "amount":
-                disc_type = "$"
-                ValorDR = round(inv.global_discount)
-            dr_line['TpoValor'] = disc_type
-            dr_line['ValorDR'] = ValorDR
-            dr_lines.extend([{'DscRcgGlobal':dr_line}])
+        MntExe = 0
+        for line in self.pack_operation_product_ids:
+            if line.product_id.default_code == 'NO_PRODUCT':
+                no_product = True
+            lines = collections.OrderedDict()
+            lines['NroLinDet'] = line_number
+            if line.product_id.default_code and not no_product:
+                lines['CdgItem'] = collections.OrderedDict()
+                lines['CdgItem']['TpoCodigo'] = 'INT1'
+                lines['CdgItem']['VlrCodigo'] = line.product_id.default_code
+            taxInclude = False
+            if line.operation_line_tax_ids:
+                for t in line.operation_line_tax_ids:
+                    taxInclude = t.price_include
+                    if t.amount == 0 or t.sii_code in [0]:#@TODO mejor manera de identificar exento de afecto
+                        lines['IndExe'] = 1
+                        MntExe += int(round(line.price_tax_included, 0))
+            lines['NmbItem'] = self._acortar_str(line.product_id.name,80) #
+            lines['DscItem'] = self._acortar_str(line.name, 1000) #descripción más extenza
+            if line.product_id.default_code:
+                lines['NmbItem'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),80)
+            qty = round(line.qty_done, 4)
+            if not no_product:
+                lines['QtyItem'] = qty
+            if qty == 0 and not no_product:
+                lines['QtyItem'] = 1
+            elif qty < 0:
+                raise UserError("NO puede ser menor que 0")
+            if not no_product:
+                lines['UnmdItem'] = line.product_uom_id.name[:4]
+                lines['PrcItem'] = round(line.price_unit, 4)
+            if line.discount > 0:
+                lines['DescuentoPct'] = line.discount
+                lines['DescuentoMonto'] = int(round((((line.discount / 100) * lines['PrcItem'])* qty)))
+            if not no_product and MntExe > 0:
+                lines['MontoItem'] = int(round(MntExe))
+            elif not no_product and not taxInclude:
+                lines['MontoItem'] = int(round(line.subtotal, 0))
+            elif not no_product :
+                lines['MontoItem'] = int(round(line.price_tax_included,0))
+            if no_product:
+                lines['MontoItem'] = 0
+            line_number += 1
+            picking_lines.extend([{'Detalle': lines}])
+            if 'IndExe' in lines:
+            	taxInclude = False
+        return {
+                'picking_lines': picking_lines,
+                'MntExe':MntExe,
+                'no_product':no_product,
+                'tax_include': taxInclude,
+                }
+
+    def _dte(self, n_atencion=None):
+        dte = collections.OrderedDict()
+        picking_lines = self._picking_lines()
+        dte['Encabezado'] = self._encabezado(picking_lines['MntExe'], picking_lines['no_product'], picking_lines['tax_include'])
+        count = 0
         lin_ref = 1
         ref_lines = []
-        TasaIVA = "19.00"
-        if dte_service == 'SIIHOMO':
+        if self.company_id.dte_service_provider == 'SIIHOMO' and isinstance(n_atencion, unicode):
             ref_line = {}
             ref_line = collections.OrderedDict()
             ref_line['NroLinRef'] = lin_ref
             count = count +1
             ref_line['TpoDocRef'] = "SET"
-            ref_line['FolioRef'] = self.get_folio(self)
+            ref_line['FolioRef'] = self.get_folio()
             ref_line['FchRef'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
             ref_line['RazonRef'] = "CASO "+n_atencion+"-" + str(self.sii_batch_number)
             lin_ref = 2
@@ -877,127 +1011,53 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                 if ref.date:
                     ref_line['FchRef'] = ref.date
             ref_lines.extend([{'Referencia':ref_line}])
-        for line in lines :
-            if line.product_id.default_code == 'NO_PRODUCT':
-                no_product = True
-            lines = collections.OrderedDict()
-            lines['NroLinDet'] = line_number
-            if line.product_id.default_code and not no_product:
-                lines['CdgItem'] = collections.OrderedDict()
-                lines['CdgItem']['TpoCodigo'] = 'INT1'
-                lines['CdgItem']['VlrCodigo'] = line.product_id.default_code
-            #name = line.product_id.name
-            lines['NmbItem'] = self._acortar_str(line.product_id.name,80)
-            lines['DscItem'] = self._acortar_str(line.name, 1000)
-            if line.product_id.default_code:
-                lines['NmbItem'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),80)
-            if not 'qty_done' in line:
-                raise UserError(_('Must add some quantity moved!'))
-            else :
-                qty = line.qty_done
-                uom = line.product_uom_id.name[:4]
-            lines['QtyItem'] = 1
-            if qty > 0:
-                lines['QtyItem'] = qty
-            else:
-                raise UserError("NO puede ser menor que 0")
-            lines['UnmdItem'] = uom
-            if line.price_unit > 0:
-                lines['PrcItem'] = line.price_unit
-            if line.discount > 0: # SSe asume de que siempre en odoo el decuento viene en % para las l´ineas
-                lines['DescuentoPct'] = line.discount
-                lines['DescuentoMonto'] = int(round((((line.discount / 100) * line.price_unit)* qty)))
-            lines['MontoItem'] = int(round(line.subtotal))
-            if line.operation_line_tax_ids:
-                for t in line.operation_line_tax_ids:
-                    if t.amount > 0: #@TODO definir método para encntrar iva comun
-                        TasaIVA = t.amount
-            line_number += 1
-            picking_lines.extend([{'Detalle': lines}])
-        ted1 = self.get_barcode(dte_service,inv)
-        folio = self.get_folio(self)
-        dte = collections.OrderedDict()
-        dte1 = collections.OrderedDict()
-        giros_emisor = []
-        for turn in self.company_id.company_activities_ids:
-            giros_emisor.extend([{'Acteco': turn.code}])
-        dte['Encabezado'] = collections.OrderedDict()
-        dte['Encabezado']['IdDoc'] = collections.OrderedDict()
-        dte['Encabezado']['IdDoc']['TipoDTE'] = 52
-        dte['Encabezado']['IdDoc']['Folio'] = folio
-        dte['Encabezado']['IdDoc']['FchEmis'] = self.min_date[:10]
-        if self.transport_type and self.transport_type not in ['0']:
-            dte['Encabezado']['IdDoc']['TipoDespacho'] = self.transport_type
-        dte['Encabezado']['IdDoc']['IndTraslado'] = self.move_reason
-        dte['Encabezado']['Emisor'] = collections.OrderedDict()
-        dte['Encabezado']['Emisor']['RUTEmisor'] = self.format_vat(self.company_id.vat)
-        dte['Encabezado']['Emisor']['RznSoc'] = self.company_id.partner_id.name
-        dte['Encabezado']['Emisor']['GiroEmis'] = self._acortar_str(self.company_id.activity_description.name, 80)
-        dte['Encabezado']['Emisor']['Telefono'] = self.company_id.phone or ''
-        dte['Encabezado']['Emisor']['CorreoEmisor'] = self.company_id.dte_email
-        dte['Encabezado']['Emisor']['item'] = giros_emisor # giros de la compañia - codigos
-        # todo: <CdgSIISucur>077063816</CdgSIISucur> codigo de sucursal
-        dte['Encabezado']['Emisor']['DirOrigen'] = self.company_id.street
-        dte['Encabezado']['Emisor']['CmnaOrigen'] = self.company_id.state_id.name
-        dte['Encabezado']['Emisor']['CiudadOrigen'] = self.company_id.city
-        dte['Encabezado']['Receptor'] = collections.OrderedDict()
-        dte['Encabezado']['Receptor']['RUTRecep'] = self.format_vat(self.partner_id.vat)
-        dte['Encabezado']['Receptor']['RznSocRecep'] = self.partner_id.name
-        if not self.activity_description:
-            raise UserError(_('Seleccione giro del asociado'))
-        dte['Encabezado']['Receptor']['GiroRecep'] = self._acortar_str(self.activity_description.name, 40)
-        dte['Encabezado']['Receptor']['DirRecep'] = self.partner_id.street + ' ' + (self.partner_id.street2 or '')
-        dte['Encabezado']['Receptor']['CmnaRecep'] = self.partner_id.state_id.name
-        dte['Encabezado']['Receptor']['CiudadRecep'] = self.partner_id.city
-        dte['Encabezado']['Transporte'] = collections.OrderedDict()
-        if self.patente:
-            dte['Encabezado']['Transporte']['Patente'] = self.patente[:8]
-        elif self.vehicle:
-            dte['Encabezado']['Transporte']['Patente'] = self.vehicle.matricula or ''
-        if self.transport_type in ['2','3'] and self.chofer:
-            if not self.chofer.vat:
-                raise UserError("Debe llenar los datos del chofer")
-            if self.transport_type == '2':
-                dte['Encabezado']['Transporte']['RUTTrans'] = self.format_vat(self.company_id.vat)
-            else:
-                if not self.carrier_id.partner_id.vat:
-                    raise UserError("Debe especificar el RUT del transportista, en su ficha de partner")
-                dte['Encabezado']['Transporte']['RUTTrans'] = self.format_vat(self.carrier_id.partner_id.vat)
-            if self.chofer:
-                dte['Encabezado']['Transporte']['Chofer'] = collections.OrderedDict()
-                dte['Encabezado']['Transporte']['Chofer']['RUTChofer'] = self.format_vat(self.chofer.vat)
-                dte['Encabezado']['Transporte']['Chofer']['NombreChofer'] = self.chofer.name[:30]
-        dte['Encabezado']['Transporte']['DirDest'] = (self.partner_id.street or '')+ ' '+ (self.partner_id.street2 or '')
-        dte['Encabezado']['Transporte']['CmnaDest'] = self.partner_id.state_id.name or ''
-        dte['Encabezado']['Transporte']['CiudadDest'] = self.partner_id.city or ''
-        #@TODO SUb Area Aduana
-        dte['Encabezado']['Totales'] = collections.OrderedDict()
-        #@TODO aplicar decuentos
-        dte['Encabezado']['Totales']['MntNeto'] = int(round(self.amount_untaxed, 0))
-        dte['Encabezado']['Totales']['TasaIVA'] = TasaIVA
-        dte['Encabezado']['Totales']['IVA'] = int(round(self.amount_tax, 0))
-        dte['Encabezado']['Totales']['MntTotal'] = int(round(self.amount_total, 0))
-        dte['item'] = picking_lines
-        dte['drLines'] = dr_lines
-        dte['refs'] = ref_lines
-        doc_id_number = "F{}T{}".format(
-            folio, '52')
-        doc_id = '<Documento ID="{}">'.format(doc_id_number)
-        dte['TEDd'] = 'TEDTEDTED'
-        dte1['Documento ID'] = dte
+        dte['item'] = picking_lines['picking_lines']
+
+        dte['reflines'] = ref_lines
+        dte['TEDd'] = self.get_barcode(picking_lines['no_product'])
+        return dte
+
+    def _dte_to_xml(self, dte):
+        ted = dte['Documento ID']['TEDd']
+        dte['Documento ID']['TEDd'] = ''
+        dicttoxml.set_debug(False)
         xml = dicttoxml.dicttoxml(
-            dte1, root=False, attr_type=False).replace('<item>','').replace('</item>','').replace('<refs>','').replace('</refs>','').replace('<drLines>','').replace('</drLines>','')
-        if dte_service in ['SII', 'SIIHOMO']:
-            xml = xml.replace('<TEDd>TEDTEDTED</TEDd>', ted1)
+            dte, root=False, attr_type=False) \
+            .replace('<item>','').replace('</item>','')\
+            .replace('<reflines>','').replace('</reflines>','')\
+            .replace('<TEDd>','').replace('</TEDd>','')\
+            .replace('</Documento_ID>','\n'+ted+'\n</Documento_ID>')
+        return xml
+
+    def _timbrar(self, n_atencion=None):
+        try:
+            signature_d = self.get_digital_signature(self.company_id)
+        except:
+            raise UserError(_('''There is no Signer Person with an \
+        authorized signature for you in the system. Please make sure that \
+        'user_signature_key' module has been installed and enable a digital \
+        signature, for you or make the signer to authorize you to use his \
+        signature.'''))
+        certp = signature_d['cert'].replace(
+            BC, '').replace(EC, '').replace('\n', '')
+        dte = collections.OrderedDict()
+
+        folio = self.get_folio()
+        dte = collections.OrderedDict()
+        doc_id_number = "F{}T{}".format(
+            folio, self.picking_type_id.sii_document_class_id.sii_code)
+        doc_id = '<Documento ID="{}">'.format(doc_id_number)
+        dte['Documento ID'] = self._dte(n_atencion)
+        xml = self._dte_to_xml(dte)
         root = etree.XML( xml )
         xml_pret = etree.tostring(root, pretty_print=True).replace(
 '<Documento_ID>', doc_id).replace('</Documento_ID>', '</Documento>')
         envelope_efact = self.convert_encoding(xml_pret, 'ISO-8859-1')
         envelope_efact = self.create_template_doc(envelope_efact)
-        self.sii_xml_request = self.sign_full_xml(
+        einvoice = self.sign_full_xml(
             envelope_efact, signature_d['priv_key'],
             self.split_cert(certp), doc_id_number)
-
+        self.sii_xml_request = einvoice
 
     @api.multi
     def do_dte_send(self, n_atencion=False):
@@ -1015,8 +1075,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             signature.'''))
             certp = signature_d['cert'].replace(
                 BC, '').replace(EC, '').replace('\n', '')
-            #if rec.company_id.dte_service_provider == 'SIIHOMO': # si ha sido timbrado offline, no se puede volver a timbrar
-            rec._timbrar(n_atencion)
+            if rec.company_id.dte_service_provider == 'SIIHOMO': # si ha sido timbrado offline, no se puede volver a timbrar
+                rec._timbrar(n_atencion)
             DTEs.update( {rec.id: rec.sii_xml_request})
             if not company_id:
                 company_id = rec.company_id
