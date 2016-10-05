@@ -746,6 +746,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             n_atencion = ''
         for rec in self:
             rec.responsable_envio = self.env.user.id
+            if rec.sii_result not in ['','NoEnviado']:
+                raise UserError("El documento %s ya ha sido enviado o está en cola de envío" % rec.sii_document_number)
             if not rec.sii_xml_request:
                 self._timbrar(n_atencion)
             rec.sii_result = "EnCola"
