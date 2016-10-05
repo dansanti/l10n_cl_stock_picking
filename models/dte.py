@@ -840,14 +840,15 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
     def _totales(self, MntExe=0, no_product=False, taxInclude=False):
         Totales = collections.OrderedDict()
-        IVA ="19"
+        IVA = 19
         for line in self.pack_operation_product_ids:
             if line.operation_line_tax_ids:
                 for t in line.operation_line_tax_ids:
                     IVA = t.amount
-        Totales['MntNeto'] = int(round(self.amount_untaxed, 0))
-        Totales['TasaIVA'] = round(IVA,2)
-        Totales['IVA'] = int(round(self.amount_tax, 0))
+        if IVA > 0:
+            Totales['MntNeto'] = int(round(self.amount_untaxed, 0))
+            Totales['TasaIVA'] = round(IVA,2)
+            Totales['IVA'] = int(round(self.amount_tax, 0))
 
         monto_total = int(round(self.amount_total, 0))
         Totales['MntTotal'] = monto_total
@@ -957,7 +958,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                 raise UserError("NO puede ser menor que 0")
             if not no_product:
                 lines['UnmdItem'] = line.product_uom_id.name[:4]
-                lines['PrcItem'] = round(line.price_unit, 4)
+                if line.price_unit > 0:
+                    lines['PrcItem'] = round(line.price_unit, 4)
             if line.discount > 0:
                 lines['DescuentoPct'] = line.discount
                 lines['DescuentoMonto'] = int(round((((line.discount / 100) * lines['PrcItem'])* qty)))
@@ -1106,7 +1108,6 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         envio_dte = self.sign_full_xml(
             envio_dte, signature_d['priv_key'], certp,
             'SetDoc', 'env')
-        self.xml_validator(envio_dte, 'env')
         result = self.send_xml_file(envio_dte, file_name, company_id)
         if result:
             for rec in self:
