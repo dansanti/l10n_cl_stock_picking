@@ -29,30 +29,35 @@ msgid "Origin"
 msgstr "Origen"
 
 #. module: l10n_cl_stock_picking
+#: model:ir.model.fields,field_description:l10n_cl_stock_picking.field_stock_picking_is_canceled
+msgid "Is Canceled?"
+msgstr "Está Cancelada?"
+
+#. module: l10n_cl_stock_picking
 #: model:ir.model.fields,field_description:l10n_cl_stock_picking.field_stock_picking_reference_sii_referencia_TpoDocRef
 msgid "SII document type reference"
 msgstr "Tipo de documento SII de la referencia"
 
 #. module: l10n_cl_stock_picking
 #: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_invoice_form
-#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electroinic_stock_picking_form
+#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electronic_stock_picking_form
 msgid "Download XML"
 msgstr "Descargar XML de envío"
 
 #. module: l10n_cl_stock_picking
 #: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_invoice_form
-#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electroinic_stock_picking_form
+#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electronic_stock_picking_form
 msgid "Send XML"
 msgstr "Enviar Documento al SII"
 
 #. module: l10n_cl_stock_picking
 #: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_invoice_form
-#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electroinic_stock_picking_form
+#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electronic_stock_picking_form
 msgid "Ask for DTE"
 msgstr "Consultar estado Documento"
 
 #. module: l10n_cl_stock_picking
-#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electroinic_stock_picking_form
+#: model:ir.ui.view,arch_db:l10n_cl_stock_picking.view_electronic_stock_picking_form
 msgid "Electronic Document"
 msgstr "Guía de Despacho Electrónica"
 
