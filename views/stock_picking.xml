@@ -126,13 +126,15 @@
         </record>
 
 
-        <record id="view_picking_type_form_electronic_stock_picking_class" model="ir.ui.view">
-            <field name="name">l10n_cl.stock_picking.tree</field>
-            <field name="model">stock.picking.type</field>
-            <field name="inherit_id" ref="stock.view_picking_type_form"/>
+        <record id="view_stock_location_form_electronic_stock_picking_class" model="ir.ui.view">
+            <field name="name">l10n_cl.stock.location.tree</field>
+            <field name="model">stock.location</field>
+            <field name="inherit_id" ref="stock.view_location_form"/>
             <field name="arch" type="xml">
-                <field name="name" position="after">
-                    <field name="sii_document_class_id"/>
+                <field name="usage" position="after">
+                    <field name="sii_code"/>
+                    <field name="sequence_id"/>
+                    <field name="sii_document_class_id" />
                 </field>
             </field>
         </record>

@@ -14,8 +14,8 @@
                     <t t-if="not o or not 'company_id' in o">
                         <t t-set="company" t-value="res_company"></t>
                   </t>
-                  <t t-if="'picking_type_id' in o and o.picking_type_id.sii_document_class_id">
-                    <t t-set="document_class_id" t-value="o.picking_type_id.sii_document_class_id"/>
+                  <t t-if="'picking_type_id' in o and o.location_id.sii_document_class_id">
+                    <t t-set="document_class_id" t-value="o.location_id.sii_document_class_id"/>
                   </t>
                   <div class="header">
                     <div class="row">

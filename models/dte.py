@@ -418,7 +418,7 @@ version="1.0">
             obj = user = self.env.user
         if not obj.cert:
             obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
-            if not obj or not user.id in obj.authorized_users_ids.ids:
+            if not obj or not obj.cert:
                 obj = self.env['res.company'].browse([comp_id.id])
                 if not obj.cert or not user.id in obj.authorized_users_ids.ids:
                     return False
@@ -432,12 +432,15 @@ version="1.0">
         return signature_data
 
     def get_digital_signature(self, comp_id):
-        obj = user = self[0].responsable_envio
+        obj = user = False
+        if 'responsable_envio' in self and self._ids:
+            obj = user = self[0].responsable_envio
         if not obj:
             obj = user = self.env.user
+        _logger.info(obj.name)
         if not obj.cert:
             obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
-            if not obj or not user.id in obj.authorized_users_ids.ids:
+            if not obj or not obj.cert:
                 obj = self.env['res.company'].browse([comp_id.id])
                 if not obj.cert or not user.id in obj.authorized_users_ids.ids:
                     return False
@@ -447,6 +450,7 @@ version="1.0">
             'priv_key': obj.priv_key,
             'cert': obj.cert}
         return signature_data
+
 
     '''
     Funcion usada en SII
@@ -541,9 +545,8 @@ version="1.0">
          de que la secuencia no está en el rango del CAF
     '''
     def get_caf_file(self):
-        caffiles = self.picking_type_id.sequence_id.dte_caf_ids
+        caffiles = self.location_id.sequence_id.dte_caf_ids
         folio = self.get_folio()
-        _logger.info(folio)
         for caffile in caffiles:
             post = base64.b64decode(caffile.caf_file)
             post = xmltodict.parse(post.replace(
@@ -674,6 +677,9 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         copy=False,
         string=_('SII Barcode Image'),
         help='SII Barcode Image in PDF417 format')
+    sii_receipt = fields.Text(
+        string='SII Mensaje de recepción',
+        copy=False)
     sii_message = fields.Text(
         string='SII Message',
         copy=False)
@@ -730,9 +736,9 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
     @api.multi
     def do_new_transfer(self):
         for s in self:
-            if not s.sii_document_number and s.picking_type_id.sequence_id.is_dte:
-                s.sii_document_number = int(s.name)
-                document_number = (s.picking_type_id.sii_document_class_id.doc_code_prefix or '') + s.sii_document_number
+            if not s.sii_document_number and s.location_id.sequence_id.is_dte:
+                s.sii_document_number = s.location_id.sequence_id.next_by_id()
+                document_number = (s.location_id.sii_document_class_id.doc_code_prefix or '') + s.sii_document_number
                 s.name = document_number
             if s.picking_type_id.code in ['outgoing', 'internal']: # @TODO diferenciar si es de salida o entrada para internal
                 s.responsable_envio = self.env.user.id
@@ -766,7 +772,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
     def _id_doc(self, taxInclude=False, MntExe=0):
         IdDoc= collections.OrderedDict()
-        IdDoc['TipoDTE'] = self.picking_type_id.sii_document_class_id.sii_code
+        IdDoc['TipoDTE'] = self.location_id.sii_document_class_id.sii_code
         IdDoc['Folio'] = self.get_folio()
         IdDoc['FchEmis'] = self.min_date[:10]
         if self.transport_type and self.transport_type not in ['0']:
@@ -788,10 +794,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         Emisor['Telefono'] = self.company_id.phone or ''
         Emisor['CorreoEmisor'] = self.company_id.dte_email
         Emisor['item'] = self._giros_emisor()
-        #@TODO: <CdgSIISucur>077063816</CdgSIISucur> codigo de sucursal
-        # no obligatorio si no hay sucursal, pero es un numero entregado
-        # por el SII para cada sucursal.
-        # este deberia agregarse al "punto de venta" el cual ya esta
+        if self.location_id.sii_code:
+            Emisor['CdgSIISucur'] = self.location_id.sii_code
         Emisor['DirOrigen'] = self.company_id.street + ' ' +(self.company_id.street2 or '')
         Emisor['CmnaOrigen'] = self.company_id.city_id.name or ''
         Emisor['CiudadOrigen'] = self.company_id.city or ''
@@ -869,7 +873,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
     def get_barcode(self, no_product=False):
         ted = False
         result['TED']['DD']['RE'] = self.format_vat(self.company_id.vat)
-        result['TED']['DD']['TD'] = self.picking_type_id.sii_document_class_id.sii_code
+        result['TED']['DD']['TD'] = self.location_id.sii_document_class_id.sii_code
         result['TED']['DD']['F']  = self.get_folio()
         result['TED']['DD']['FE'] = self.min_date[:10]
         if not self.partner_id.vat:
@@ -1049,7 +1053,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         folio = self.get_folio()
         dte = collections.OrderedDict()
         doc_id_number = "F{}T{}".format(
-            folio, self.picking_type_id.sii_document_class_id.sii_code)
+            folio, self.location_id.sii_document_class_id.sii_code)
         doc_id = '<Documento ID="{}">'.format(doc_id_number)
         dte['Documento ID'] = self._dte(n_atencion)
         xml = self._dte_to_xml(dte)
@@ -1127,7 +1131,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         _server = SOAPProxy(url, ns)
         rut = self.format_vat(self.company_id.vat)
         respuesta = _server.getEstUp(rut[:8], str(rut[-1]),track_id,token)
-        self.sii_message = respuesta
+        self.sii_receipt = respuesta
         resp = xmltodict.parse(respuesta)
         status = False
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == "-11":
@@ -1148,7 +1152,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         receptor = self.format_vat(self.partner_id.vat)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))
-        sii_code = str(self.picking_type_id.sii_document_class_id.sii_code)
+        sii_code = str(self.location_id.sii_document_class_id.sii_code)
         respuesta = _server.getEstDte(signature_d['subject_serial_number'][:8], str(signature_d['subject_serial_number'][-1]),
                 self.company_id.vat[2:-1],self.company_id.vat[-1], receptor[:8],receptor[2:-1], sii_code, str(self.sii_document_number),
                 min_date, total,token)

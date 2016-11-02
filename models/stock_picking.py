@@ -306,15 +306,16 @@ class StockPicking(models.Model):
         self.do_recompute_remaining_quantities(cr, uid, picking_ids, context=context)
         self.write(cr, uid, picking_ids, {'recompute_pack_op': False}, context=context)
 
-class StockPickingType(models.Model):
+class StockLocation(models.Model):
+    _inherit = 'stock.location'
 
-    _inherit = 'stock.picking.type'
-    sii_document_class_id = fields.Many2one(
-            'sii.document_class',
-            string='Document Type',
-            copy=False,
-            store=True)
-
+    sii_document_class_id = fields.Many2one('sii.document_class',
+                                                'Document Type', required=True)
+    sequence_id = fields.Many2one(
+        'ir.sequence', 'Entry Sequence', required=False,
+        help="""This field contains the information related to the numbering \
+        of the documents entries of this document type.""")
+    sii_code = fields.Char(string="Código de Sucursal SII")
 
 class Referencias(models.Model):
     _name = 'stock.picking.referencias'
