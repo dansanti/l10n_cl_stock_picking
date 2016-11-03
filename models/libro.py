@@ -181,22 +181,21 @@ class Libro(models.Model):
         return data
 
     def xml_validator(self, some_xml_string, validacion='doc'):
-        if 1==1:
-            validacion_type = {
-                'doc': 'DTE_v10.xsd',
-                'env': 'EnvioDTE_v10.xsd',
-                'sig': 'xmldsignature_v10.xsd',
-                'libro': 'LibroGuia_v10.xsd',
-                'libroS': 'LibroCVS_v10.xsd',
-            }
-            xsd_file = xsdpath+validacion_type[validacion]
-            try:
-                schema = etree.XMLSchema(file=xsd_file)
-                parser = objectify.makeparser(schema=schema)
-                objectify.fromstring(some_xml_string, parser)
-                return True
-            except XMLSyntaxError as e:
-                raise Warning(_('XML Malformed Error %s') % e.args)
+        validacion_type = {
+            'doc': 'DTE_v10.xsd',
+            'env': 'EnvioDTE_v10.xsd',
+            'sig': 'xmldsignature_v10.xsd',
+            'libro': 'LibroGuia_v10.xsd',
+            'libroS': 'LibroCVS_v10.xsd',
+        }
+        xsd_file = xsdpath+validacion_type[validacion]
+        try:
+            schema = etree.XMLSchema(file=xsd_file)
+            parser = objectify.makeparser(schema=schema)
+            objectify.fromstring(some_xml_string, parser)
+            return True
+        except XMLSyntaxError as e:
+            raise Warning(_('XML Malformed Error %s') % e.args)
 
     '''
     Funcion usada en autenticacion en SII
@@ -430,20 +429,18 @@ version="1.0">
         #   ###### comienzo de bloque de autenticacion #########
         #   ### Hipótesis: un envío por cada RUT de receptor ###
         # all el código estaba indentado más adentro antes....
-        if 1==1:
-            try:
-                signature_d = self.get_digital_signature_pem(
-                    company_id)
-                seed = self.get_seed(company_id)
-                template_string = self.create_template_seed(seed)
-                seed_firmado = self.sign_seed(
-                    template_string, signature_d['priv_key'],
-                    signature_d['cert'])
-                token = self.get_token(seed_firmado,company_id)
-            except:
-                raise Warning(connection_status[response.e])
-        else:
-            return {'sii_result': 'NoEnviado'}
+        try:
+            signature_d = self.get_digital_signature_pem(
+                company_id)
+            seed = self.get_seed(company_id)
+            template_string = self.create_template_seed(seed)
+            seed_firmado = self.sign_seed(
+                template_string, signature_d['priv_key'],
+                signature_d['cert'])
+            token = self.get_token(seed_firmado,company_id)
+        except:
+            raise Warning(connection_status[response.e])
+
         url = 'https://palena.sii.cl'
         if company_id.dte_service_provider == 'SIIHOMO':
             url = 'https://maullin.sii.cl'
@@ -492,49 +489,6 @@ version="1.0">
 &field=sii_xml_request&id=%s&filename=%s' % (self.id,filename),
             'target': 'self',
         }
-
-    '''
-    Funcion usada en SII para toma de folio desde el archivo de folios (caf)
-    Requiere compatibilidad con el addon l10n_cl_dte_caf
-    No incluido en dependencias deliberadamente (manejo desde l10n_cl_base)
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2016-05-01
-    '''
-    def get_caf_file(self, inv):
-        returnvalue = False
-        #try:
-        if 1==1:
-            no_caf = True
-            caffiles = inv.journal_document_class_id.sequence_id.dte_caf_ids
-            for caffile in caffiles:
-                if caffile.status == 'in_use':
-                    resultc = base64.b64decode(caffile.caf_file)
-                    no_caf = False
-                    break
-            if no_caf:
-                raise Warning(_('''There is no CAF file available or in use \
-for this Document. Please enable one.'''))
-            resultcaf = xmltodict.parse(resultc.replace(
-                '<?xml version="1.0"?>','',1))
-
-            folio_inicial = resultcaf['AUTORIZACION']['CAF']['DA']['RNG']['D']
-            folio_final = resultcaf['AUTORIZACION']['CAF']['DA']['RNG']['H']
-            folio = self.get_folio(inv)
-            if folio not in range(int(folio_inicial), int(folio_final)):
-                msg = '''El folio de este documento: {} está fuera de rango \
-del CAF vigente (desde {} hasta {}). Solicite un nuevo CAF en el sitio \
-www.sii.cl'''.format(folio, folio_inicial, folio_final)
-                caffile.status = 'spent'
-                raise Warning(_(msg))
-            elif folio > int(folio_final) - 2:
-                msg = '''El CAF esta pronto a terminarse. Solicite un nuevo \
-                CAF para poder continuar emitiendo documentos tributarios'''
-            else:
-                msg = '''Folio {} OK'''.format(folio)
-            returnvalue = resultcaf
-        else:
-            pass
-        return returnvalue
 
     '''
     Funcion para reformateo del vat desde modo Odoo (dos digitos pais sin guion)
@@ -730,7 +684,6 @@ exponent. AND DIGEST""")
 
     @api.multi
     def do_dte_send_book(self):
-        cant_doc_batch = 0
         company_id = self.company_id
         dte_service = company_id.dte_service_provider
         try:
