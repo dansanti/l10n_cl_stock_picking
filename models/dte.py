@@ -1183,6 +1183,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             token = self.get_token(seed_firmado,self.company_id)
         except:
             raise UserError(connection_status[response.e])
+        if not self.sii_send_ident:
+            raise UserError('No se ha enviado aún el documento, aún está en cola de envío interna en odoo')
         xml_response = xmltodict.parse(self.sii_xml_response)
         if self.sii_result == 'Enviado':
             status = self._get_send_status(self.sii_send_ident, signature_d, token)
