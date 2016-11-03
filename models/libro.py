@@ -190,12 +190,16 @@ class Libro(models.Model):
         }
         xsd_file = xsdpath+validacion_type[validacion]
         try:
-            schema = etree.XMLSchema(file=xsd_file)
-            parser = objectify.makeparser(schema=schema)
-            objectify.fromstring(some_xml_string, parser)
-            return True
-        except XMLSyntaxError as e:
-            raise Warning(_('XML Malformed Error %s') % e.args)
+            xmlschema_doc = etree.parse(xsd_file)
+            xmlschema = etree.XMLSchema(xmlschema_doc)
+            xml_doc = etree.fromstring(some_xml_string)
+            result = xmlschema.validate(xml_doc)
+            if not result:
+                xmlschema.assert_(xml_doc)
+            return result
+        except AssertionError as e:
+            raise UserError(_('XML Malformed Error:  %s') % e.args)
+
 
     '''
     Funcion usada en autenticacion en SII
@@ -324,7 +328,6 @@ version="1.0">
         return s
 
     def sign_full_xml(self, message, privkey, cert, uri, type='libro'):
-        #_logger.info('mensaje de entrada: %s' % message)
         doc = etree.fromstring(message)
         string = etree.tostring(doc[0])
         mess = etree.tostring(etree.fromstring(string), method="c14n")
@@ -343,7 +346,8 @@ version="1.0">
         att = 'xmlns="http://www.w3.org/2000/09/xmldsig#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
         #@TODO Find better way to add xmlns:xsi attrib
         signed_info_c14n = signed_info_c14n.replace("<SignedInfo>","<SignedInfo " + att + ">")
-        sig_root = Element("Signature",attrib={'xmlns':'http://www.w3.org/2000/09/xmldsig#'})
+        xmlns = 'http://www.w3.org/2000/09/xmldsig#'
+        sig_root = Element("Signature",attrib={'xmlns':xmlns})
         sig_root.append(etree.fromstring(signed_info_c14n))
         signature_value = SubElement(sig_root, "SignatureValue")
         from cryptography.hazmat.backends import default_backend
@@ -737,7 +741,11 @@ exponent. AND DIGEST""")
         company_id = self.company_id
         envio_dte, doc_id = self._crear_libro()
         result = self.send_xml_file(envio_dte, doc_id+'.xml', company_id)
-        self.write({'sii_xml_response':result['sii_xml_response'], 'sii_send_ident':result['sii_send_ident'], 'state': result['sii_result'],'sii_xml_request':envio_dte})
+        self.write({
+            'sii_xml_response':result['sii_xml_response'],
+            'sii_send_ident':result['sii_send_ident'],
+            'state': result['sii_result'],
+            'sii_xml_request':envio_dte})
 
     def _get_send_status(self, track_id, signature_d,token):
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'
