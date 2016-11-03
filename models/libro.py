@@ -586,6 +586,7 @@ exponent. AND DIGEST""")
 
     @api.multi
     def validar_libro(self):
+        self._crear_libro()
         return self.write({'state': 'NoEnviado'})
 
     def _acortar_str(self, texto, size=1):
@@ -682,8 +683,7 @@ exponent. AND DIGEST""")
                 resumenP['itemTraslado'] = new
         return resumenP
 
-    @api.multi
-    def do_dte_send_book(self):
+    def _crear_libro(self):
         company_id = self.company_id
         dte_service = company_id.dte_service_provider
         try:
@@ -730,6 +730,12 @@ exponent. AND DIGEST""")
         envio_dte = self.sign_full_xml(
             envio_dte, signature_d['priv_key'], certp,
             doc_id, 'libro')
+        return envio_dte, doc_id
+
+    @api.multi
+    def do_dte_send_book(self):
+        company_id = self.company_id
+        envio_dte, doc_id = self._crear_libro()
         result = self.send_xml_file(envio_dte, doc_id+'.xml', company_id)
         self.write({'sii_xml_response':result['sii_xml_response'], 'sii_send_ident':result['sii_send_ident'], 'state': result['sii_result'],'sii_xml_request':envio_dte})
 
