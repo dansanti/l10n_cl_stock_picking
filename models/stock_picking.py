@@ -53,13 +53,13 @@ class StockPicking(models.Model):
                         self.amount_tax +=tax['amount']
             self.amount_total = self.amount_untaxed + self.amount_tax
 
-    amount_untaxed = fields.Float(compute='_compute_amount',
+    amount_untaxed = fields.Monetary(compute='_compute_amount',
                                   digits_compute=dp.get_precision('Account'),
                                   string='Untaxed Amount')
-    amount_tax = fields.Float(compute='_compute_amount',
+    amount_tax = fields.Monetary(compute='_compute_amount',
                               digits_compute=dp.get_precision('Account'),
                               string='Taxes')
-    amount_total = fields.Float(compute='_compute_amount',
+    amount_total = fields.Monetary(compute='_compute_amount',
                                 digits_compute=dp.get_precision('Account'),
                                 string='Total')
     currency_id = fields.Many2one('res.currency', string='Currency',
@@ -356,19 +356,24 @@ class StockPackOperation(models.Model):
 
     name = fields.Char(string="Nombre")
 
-    subtotal = fields.Float(
+    subtotal = fields.Monetary(
         compute='_compute_amount', digits_compute=dp.get_precision('Account'),
         string='Subtotal')
-    price_unit = fields.Float(digits_compute=dp.get_precision('Product Price'),
+    price_unit = fields.Monetary(digits_compute=dp.get_precision('Product Price'),
                                    string='Price')
-    price_untaxed = fields.Float( digits_compute=dp.get_precision('Product Price'),
+    price_untaxed = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
         string='Price Untaxed')
 
     operation_line_tax_ids = fields.Many2many('account.tax',
         'operation_line_tax', 'operation_line_id', 'tax_id',
             string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
-    discount = fields.Float(digits_compute=dp.get_precision('Discount'),
+    discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
+
+    currency_id = fields.Many2one('res.currency', string='Currency',
+        required=True, readonly=True, states={'draft': [('readonly', False)]},
+        default=lambda self: self.env.user.company_id.currency_id,
+        track_visibility='always')
 
     @api.onchange('price_unit','qty_done','product_id','operation_line_tax_ids')
     def _compute_amount(self):
@@ -428,13 +433,13 @@ class StockMove(models.Model):
 
     name = fields.Char(string="Nombre")
 
-    subtotal = fields.Float(
+    subtotal = fields.Monetary(
         compute='_compute_amount', digits_compute=dp.get_precision('Product Price'),
         string='Subtotal')
 
-    price_unit = fields.Float( digits_compute=dp.get_precision('Product Price'),
+    price_unit = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
                                    string='Price')
-    price_untaxed = fields.Float(
+    price_untaxed = fields.Monetary(
         compute='_sale_prices', digits_compute=dp.get_precision('Product Price'),
         string='Price Untaxed')
 
@@ -442,5 +447,10 @@ class StockMove(models.Model):
         'move_line_tax_ids', 'move_line_id', 'tax_id',
             string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
 
-    discount = fields.Float(digits_compute=dp.get_precision('Discount'),
+    discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
+
+    currency_id = fields.Many2one('res.currency', string='Currency',
+        required=True, readonly=True, states={'draft': [('readonly', False)]},
+        default=lambda self: self.env.user.company_id.currency_id,
+        track_visibility='always')
