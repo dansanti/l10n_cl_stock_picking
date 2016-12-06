@@ -133,7 +133,7 @@ Extensión del modelo de datos para contener parámetros globales necesarios
  @version: 2016-06-11
 '''
 
-class Libro(models.Model):
+class LibroGuia(models.Model):
     _name = "stock.picking.book"
 
     def split_cert(self, cert):
@@ -211,8 +211,11 @@ class Libro(models.Model):
     def get_seed(self, company_id):
         #En caso de que haya un problema con la validación de certificado del sii ( por una mala implementación de ellos)
         #esto omite la validacion
-        import ssl
-        ssl._create_default_https_context = ssl._create_unverified_context
+        try:
+            import ssl
+            ssl._create_default_https_context = ssl._create_unverified_context
+        except:
+            pass
         url = server_url[company_id.dte_service_provider] + 'CrSeed.jws?WSDL'
         ns = 'urn:'+server_url[company_id.dte_service_provider] + 'CrSeed.jws'
         _server = SOAPProxy(url, ns)
@@ -377,14 +380,17 @@ version="1.0">
         return fulldoc
 
     def get_digital_signature_pem(self, comp_id):
-        obj = self.env['res.users'].browse([self.env.user.id])
+        obj = user = False
+        if 'responsable_envio' in self and self._ids:
+            obj = user = self[0].responsable_envio
+        if not obj:
+            obj = user = self.env.user
         if not obj.cert:
-            obj = self.env['res.company'].browse([comp_id.id])
-            if not obj.cert:
-                obj = self.env['res.users'].search(domain=[("authorized_users_ids","=", self.env.user.id)])
-
-            if not obj.cert or not self.env.user.id in obj.authorized_users_ids.ids:
-                return False
+            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            if not obj or not obj.cert:
+                obj = self.env['res.company'].browse([comp_id.id])
+                if not obj.cert or not user.id in obj.authorized_users_ids.ids:
+                    return False
         signature_data = {
             'subject_name': obj.name,
             'subject_serial_number': obj.subject_serial_number,
@@ -395,13 +401,18 @@ version="1.0">
         return signature_data
 
     def get_digital_signature(self, comp_id):
-        obj = self.env['res.users'].browse([self.env.user.id])
+        obj = user = False
+        if 'responsable_envio' in self and self._ids:
+            obj = user = self[0].responsable_envio
+        if not obj:
+            obj = user = self.env.user
+        _logger.info(obj.name)
         if not obj.cert:
-            obj = self.env['res.company'].browse([comp_id.id])
-            if not obj.cert:
-                obj = self.env['res.users'].search(domain=[("authorized_users_ids","=", self.env.user.id)])
-            if not obj.cert or not self.env.user.id in obj.authorized_users_ids.ids:
-                return False
+            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            if not obj or not obj.cert:
+                obj = self.env['res.company'].browse([comp_id.id])
+                if not obj.cert or not user.id in obj.authorized_users_ids.ids:
+                    return False
         signature_data = {
             'subject_name': obj.name,
             'subject_serial_number': obj.subject_serial_number,
@@ -443,7 +454,7 @@ version="1.0">
                 signature_d['cert'])
             token = self.get_token(seed_firmado,company_id)
         except:
-            raise Warning(connection_status[response.e])
+            raise UserError(connection_status)
 
         url = 'https://palena.sii.cl'
         if company_id.dte_service_provider == 'SIIHOMO':
@@ -544,7 +555,7 @@ exponent. AND DIGEST""")
     def _setName(self):
         if self.name:
             return
-        if self.periodo_tributario:
+        if self.periodo_tributario and self.name:
             self.name += " " + self.periodo_tributario
 
     sii_message = fields.Text(
@@ -577,16 +588,46 @@ exponent. AND DIGEST""")
              " * The 'Open' status is used when user create invoice, an invoice number is generated. Its in open status till user does not pay invoice.\n"
              " * The 'Paid' status is set automatically when the invoice is paid. Its related journal entries may or may not be reconciled.\n"
              " * The 'Cancelled' status is used when user cancel invoice.")
-    move_ids = fields.Many2many('stock.picking')
+    move_ids = fields.Many2many('stock.picking',
+        readonly=True,
+        states={'draft': [('readonly', False)]})
 
-    tipo_libro = fields.Selection([('ESPECIAL','Especial')], string="Tipo de Libro",default='ESPECIAL', required=True)
-    tipo_envio = fields.Selection([('AJUSTE','Ajuste'),('TOTAL','Total'),('PARCIAL','Parcial'),('TOTAL','Total')], string="Tipo de Envío", default="TOTAL", required=True)
-    folio_notificacion = fields.Char(string="Folio de Notificación")
+    tipo_libro = fields.Selection(
+        [('ESPECIAL','Especial')],
+        string="Tipo de Libro",
+        default='ESPECIAL',
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]})
+    tipo_envio = fields.Selection(
+        [('AJUSTE','Ajuste'),('TOTAL','Total'),('PARCIAL','Parcial'),('TOTAL','Total')],
+        string="Tipo de Envío",
+        default="TOTAL",
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]})
+    folio_notificacion = fields.Char(string="Folio de Notificación",
+        readonly=True,
+        states={'draft': [('readonly', False)]})
     #total_afecto = fields.Char(string="Total Afecto")
     #total_exento = fields.Char(string="Total Exento")
-    periodo_tributario = fields.Char('Periodo Tributario', required=True)
-    company_id = fields.Many2one('res.company', required=True)
-    name = fields.Char(string="Detalle" , required=True)
+    periodo_tributario = fields.Char('Periodo Tributario',
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]})
+    company_id = fields.Many2one('res.company',
+        required=True,
+        default=lambda self: self.env.user.company_id.id,
+        readonly=True,
+        states={'draft': [('readonly', False)]})
+    name = fields.Char(string="Detalle",
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]})
+
+    _defaults = {
+        'periodo_tributario': datetime.now().strftime('%Y-%m'),
+    }
 
     @api.multi
     def validar_libro(self):
@@ -693,7 +734,7 @@ exponent. AND DIGEST""")
         try:
             signature_d = self.get_digital_signature(company_id)
         except:
-            raise Warning(_('''There is no Signer Person with an \
+            raise UserError(_('''There is no Signer Person with an \
         authorized signature for you in the system. Please make sure that \
         'user_signature_key' module has been installed and enable a digital \
         signature, for you or make the signer to authorize you to use his \
@@ -802,7 +843,7 @@ exponent. AND DIGEST""")
                 signature_d['cert'])
             token = self.get_token(seed_firmado,self.company_id)
         except:
-            raise Warning(connection_status[response.e])
+            raise UserError(connection_status[response.e])
         xml_response = xmltodict.parse(self.sii_xml_response)
         if self.state == 'Enviado':
             status = self._get_send_status(self.sii_send_ident, signature_d, token)

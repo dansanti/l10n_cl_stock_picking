@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from openerp import osv, models, fields, api, _
+from openerp import osv, models, fields, api, _, SUPERUSER_ID
 from openerp.osv import fields as old_fields
 from openerp.exceptions import except_orm, UserError
 import openerp.addons.decimal_precision as dp
@@ -132,6 +132,12 @@ class StockPicking(models.Model):
     patente = fields.Char(string="Patente", readonly=False, states={'done':[('readonly',True)]})
     contact_id = fields.Many2one('res.partner',string="Contacto", readonly=False, states={'done':[('readonly',True)]})
 
+    @api.onchange('company_id')
+    def _refreshData(self):
+        if self.move_lines:
+            for m in self.move_lines:
+                m.company_id = self.company_id.id
+
     @api.onchange('vehicle')
     def _setChofer(self):
         self.chofer = self.vehicle.driver_id
@@ -225,7 +231,7 @@ class StockPicking(models.Model):
         # Lots will go into pack operation lot object
         for quant, dest_location_id in quants_suggested_locations.items():
             key = (quant.product_id.id, quant.package_id.id, quant.owner_id.id, quant.location_id.id, dest_location_id)
-            qtys_grouped.extend([{'key':key,'value': quant.qty}])
+            qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': quant.name,'price_unit': quant.price_unit}])
             if quant.product_id.tracking != 'none' and quant.lot_id:
                 lots_grouped.setdefault(key, {}).setdefault(quant.lot_id.id, 0.0)
                 lots_grouped[key][quant.lot_id.id] += quant.qty
@@ -271,10 +277,12 @@ class StockPicking(models.Model):
                 val_dict['name'] = it['name']
             if 'price_unit' in it:
                 val_dict['price_unit'] = it['price_unit']
-            if (key[0],it['name']) in prevals:
-                prevals[(key[0],it['name'])].append(val_dict)
-            else:
-                prevals[(key[0],it['name'])] = [val_dict]
+            _logger.info(it)
+            if 'name' in it :
+                if (key[0],it['name']) in prevals:
+                    prevals[(key[0],it['name'])].append(val_dict)
+                else:
+                    prevals[(key[0],it['name'])] = [val_dict]
         # prevals var holds the operations in order to create them in the same order than the picking stock moves if possible
         processed_products = set()
         for move in [x for x in picking.move_lines if x.state not in ('done', 'cancel')]:
@@ -300,6 +308,9 @@ class StockPicking(models.Model):
                 if move.state not in ('assigned', 'confirmed', 'waiting'):
                     continue
                 move_quants = move.reserved_quant_ids
+                quant_obj = self.pool.get('stock.quant')
+                for mq in move_quants:
+                    quant_obj.write(cr, SUPERUSER_ID, mq.id, {'price_unit': move.price_unit, 'name': move.name}, context=context)
                 picking_quants += move_quants
                 forced_qty = (move.state == 'assigned') and move.product_qty - sum([x.qty for x in move_quants]) or 0
                 #if we used force_assign() on the move, or if the move is incoming, forced_qty > 0
@@ -311,6 +322,7 @@ class StockPicking(models.Model):
         #recompute the remaining quantities all at once
         self.do_recompute_remaining_quantities(cr, uid, picking_ids, context=context)
         self.write(cr, uid, picking_ids, {'recompute_pack_op': False}, context=context)
+
 
 class StockLocation(models.Model):
     _inherit = 'stock.location'
@@ -375,7 +387,6 @@ class StockPackOperation(models.Model):
             string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
     discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
-
     currency_id = fields.Many2one('res.currency', string='Currency',
         required=True, readonly=True, states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
@@ -387,7 +398,7 @@ class StockPackOperation(models.Model):
             currency = rec.picking_id.currency_id or None
             taxes = False
             if rec.operation_line_tax_ids:
-                taxes = rec.operation_line_tax_ids.compute_all(rec.price_unit, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id, discount=self.discount)
+                taxes = rec.operation_line_tax_ids.compute_all(rec.price_unit, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id, discount=rec.discount)
             rec.subtotal = price_subtotal_signed = taxes['total_excluded'] if taxes else rec.qty_done * price
 
 class StockMove(models.Model):
@@ -395,15 +406,9 @@ class StockMove(models.Model):
 
     @api.model
     def create(self,vals):
-        _logger.info(vals)
-        #if 'linked_move_operation_ids' in vals:
-        #    move = vals['linked_move_operation_ids'][0].move_id
-        #    if move.procurement_id.sale_line_id:
-        #        vals['operation_line_tax_ids'] = move.move_line_tax_ids.ids
-        #        vals['price_untaxed'] = move.price_untaxed
-        #        vals['price_unit'] = move.price_unit
-        #        vals['discount'] = move.discount
-        #        vals['subtotal'] = 0
+        if 'picking_id' in vals:
+            picking = self.env['stock.picking'].browse(vals['picking_id'])
+            vals['company_id'] = picking.company_id.id
         return super(StockMove,self).create(vals)
 
     @api.depends('picking_id.reference')
@@ -454,7 +459,6 @@ class StockMove(models.Model):
 
     discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
-
     currency_id = fields.Many2one('res.currency', string='Currency',
         required=True, readonly=True, states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,

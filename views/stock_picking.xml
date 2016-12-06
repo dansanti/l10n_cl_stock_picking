@@ -67,7 +67,6 @@
 
                 <field name="company_id" position="after">
                     <field name="turn_issuer"
-                           domain="[('partner_ids', '=', company_id)]"
                            attrs="{'required':[('use_documents','=',True)]}"
                            options="{'no_create': True}"
                            required="True"/>
