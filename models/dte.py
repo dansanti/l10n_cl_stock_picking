@@ -568,14 +568,16 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             raise UserError(_(msg))
         return False
 
-    def format_vat(self, value):
+    def format_vat(self, value, con_cero=False):
         ''' Se Elimina el 0 para prevenir problemas con el sii, ya que las muestras no las toma si va con
-        el 0 , y tambien internamente se generan problemas'''
+        el 0 , y tambien internamente se generan problemas, se mantiene el 0 delante, para cosultas, o sino retorna "error de datos"'''
         if not value or value=='' or value == 0:
             value ="CL666666666"
             #@TODO opción de crear código de cliente en vez de rut genérico
         rut = value[:10] + '-' + value[10:]
-        rut = rut.replace('CL0','').replace('CL','')
+        if not con_cero:
+            rut = rut.replace('CL0','')
+        rut = rut.replace('CL','')
         return rut
 
     '''
@@ -1127,7 +1129,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws'
         _server = SOAPProxy(url, ns)
-        rut = self.format_vat(self.company_id.vat)
+        rut = self.format_vat(self.company_id.vat, True)
         respuesta = _server.getEstUp(rut[:8], str(rut[-1]),track_id,token)
         self.sii_receipt = respuesta
         resp = xmltodict.parse(respuesta)
@@ -1147,7 +1149,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
         _server = SOAPProxy(url, ns)
-        receptor = self.format_vat(self.partner_id.vat)
+        receptor = self.format_vat(self.partner_id.vat, True)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))
         sii_code = str(self.location_id.sii_document_class_id.sii_code)
