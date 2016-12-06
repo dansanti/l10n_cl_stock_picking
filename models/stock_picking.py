@@ -33,25 +33,30 @@ class StockPicking(models.Model):
                 for turn in available_turn_ids:
                     rec.turn_issuer = turn
 
-    @api.one
     @api.onchange('pack_operation_product_ids', 'currency_id', 'company_id')
     def _compute_amount(self):
-        if self.pack_operation_product_ids and self.state not in ['draft']:
-            for operation in self.pack_operation_product_ids:
-                self.amount_untaxed += operation.subtotal
-                if operation.operation_line_tax_ids:
-                    taxes = operation.operation_line_tax_ids.compute_all(operation.price_unit, self.currency_id, operation.qty_done, product=operation.product_id, partner=self.partner_id)['taxes']
-                    for tax in taxes:
-                        self.amount_tax +=tax['amount']
-            self.amount_total = self.amount_untaxed + self.amount_tax
-        elif self.move_lines:
-            for move in self.move_lines:
-                self.amount_untaxed += move.subtotal
-                if move.move_line_tax_ids:
-                    taxes = move.move_line_tax_ids.compute_all(move.price_unit, self.currency_id, move.product_uom_qty, product=move.product_id, partner=self.partner_id)['taxes']
-                    for tax in taxes:
-                        self.amount_tax +=tax['amount']
-            self.amount_total = self.amount_untaxed + self.amount_tax
+        for rec in self:
+            taxes = {}
+            amount_untaxed = amount_tax = 0
+            if rec.pack_operation_product_ids and rec.state not in ['draft']:
+                for operation in rec.pack_operation_product_ids:
+                    amount_untaxed += operation.subtotal
+                    if operation.operation_line_tax_ids:
+                        for t in operation.operation_line_tax_ids:
+                            taxes.setdefault(t.id,[t, 0])
+                            taxes[t.id][1] += operation.subtotal
+            elif rec.move_lines:
+                for move in rec.move_lines:
+                    rec.amount_untaxed += move.subtotal
+                    if move.move_line_tax_ids:
+                        for t in move.move_line_tax_ids:
+                            taxes.setdefault(t.id,[t, 0])
+                            taxes[t.id][1] += move.subtotal
+            for t, value in taxes.iteritems():
+                amount_tax += value[0].compute_all(value[1], rec.currency_id, 1)['taxes'][0]['amount']
+            rec.amount_untaxed = amount_untaxed
+            rec.amount_tax = amount_tax
+            rec.amount_total = amount_untaxed + rec.amount_tax
 
     amount_untaxed = fields.Monetary(compute='_compute_amount',
                                   digits_compute=dp.get_precision('Account'),
@@ -151,6 +156,7 @@ class StockPicking(models.Model):
                     if not m.name:
                     	m.name = m.product_id.name
                     m.operation_line_tax_ids = m.product_id.taxes_id # @TODO mejorar asignación
+
     def _prepare_pack_ops(self, cr, uid, picking, quants, forced_qties, context=None):
         """ returns a list of dict, ready to be used in create() of stock.pack.operation.
         :param picking: browse record (stock.picking)
@@ -379,10 +385,9 @@ class StockPackOperation(models.Model):
     def _compute_amount(self):
         for rec in self:
             currency = rec.picking_id.currency_id or None
-            price = rec.price_unit * (1 - (rec.discount or 0.0) / 100.0)
             taxes = False
             if rec.operation_line_tax_ids:
-                taxes = rec.operation_line_tax_ids.compute_all(price, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id)
+                taxes = rec.operation_line_tax_ids.compute_all(rec.price_unit, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id, discount=self.discount)
             rec.subtotal = price_subtotal_signed = taxes['total_excluded'] if taxes else rec.qty_done * price
 
 class StockMove(models.Model):
@@ -450,6 +455,18 @@ class StockMove(models.Model):
     discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
 
+    currency_id = fields.Many2one('res.currency', string='Currency',
+        required=True, readonly=True, states={'draft': [('readonly', False)]},
+        default=lambda self: self.env.user.company_id.currency_id,
+        track_visibility='always')
+
+class MQ(models.Model):
+    _inherit = 'stock.quant'
+
+    name = fields.Char(string="Nombre")
+
+    price_unit = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
+                                   string='Price')
     currency_id = fields.Many2one('res.currency', string='Currency',
         required=True, readonly=True, states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
