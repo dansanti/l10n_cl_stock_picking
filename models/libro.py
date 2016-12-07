@@ -136,6 +136,13 @@ Extensión del modelo de datos para contener parámetros globales necesarios
 class LibroGuia(models.Model):
     _name = "stock.picking.book"
 
+    @api.multi
+    def unlink(self):
+        for libro in self:
+            if libro.state not in ('draft', 'cancel'):
+                raise UserError(_('You cannot delete a Validated book.'))
+        return super(LibroGuia, self).unlink()
+
     def split_cert(self, cert):
         certf, j = '', 0
         for i in range(0, 29):
