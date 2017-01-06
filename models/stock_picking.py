@@ -399,7 +399,7 @@ class StockPackOperation(models.Model):
             taxes = False
             if rec.operation_line_tax_ids:
                 taxes = rec.operation_line_tax_ids.compute_all(rec.price_unit, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id, discount=rec.discount)
-            rec.subtotal = price_subtotal_signed = taxes['total_excluded'] if taxes else rec.qty_done * price
+            rec.subtotal = taxes['total_excluded'] if taxes else rec.qty_done * ( rec.price_unit * (1 - rec.discount/100.0))
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
