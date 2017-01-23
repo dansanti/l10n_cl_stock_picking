@@ -1153,9 +1153,16 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))
         sii_code = str(self.location_id.sii_document_class_id.sii_code)
-        respuesta = _server.getEstDte(signature_d['subject_serial_number'][:8], str(signature_d['subject_serial_number'][-1]),
-                self.company_id.vat[2:-1],self.company_id.vat[-1], receptor[:8],receptor[2:-1], sii_code, str(self.sii_document_number),
-                min_date, total,token)
+        respuesta = _server.getEstDte(signature_d['subject_serial_number'][:8],
+                                      str(signature_d['subject_serial_number'][-1]),
+                                      self.company_id.vat[2:-1],
+                                      self.company_id.vat[-1],
+                                      receptor[:8],
+                                      receptor[-1],
+                                      sii_code,
+                                      str(self.sii_document_number),
+                                      min_date,
+                                      total,token)
         self.sii_message = respuesta
         resp = xmltodict.parse(respuesta)
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == '2':
