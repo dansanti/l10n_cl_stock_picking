@@ -103,10 +103,6 @@ class StockPicking(models.Model):
         related='partner_id.responsability_id',
         store=True,
         )
-    formated_vat = fields.Char(
-        string='Responsability',
-        related='partner_id.formated_vat',)
-
     next_number = fields.Integer(
         related='picking_type_id.sequence_id.number_next_actual',
         string='Next Document Number',
