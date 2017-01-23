@@ -952,7 +952,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                     taxInclude = t.price_include
                     if t.amount == 0 or t.sii_code in [0]:#@TODO mejor manera de identificar exento de afecto
                         lines['IndExe'] = 1
-                        MntExe += int(round(line.price_tax_included, 0))
+                        MntExe += int(round(line.subtotal, 0))
             lines['NmbItem'] = self._acortar_str(line.product_id.name,80) #
             lines['DscItem'] = self._acortar_str(line.name, 1000) #descripción más extenza
             if line.product_id.default_code:
@@ -971,10 +971,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             if line.discount > 0:
                 lines['DescuentoPct'] = line.discount
                 lines['DescuentoMonto'] = int(round((((line.discount / 100) * lines['PrcItem'])* qty)))
-            if not no_product and not taxInclude:
-                lines['MontoItem'] = int(round(line.subtotal, 0))
             elif not no_product :
-                lines['MontoItem'] = int(round(line.price_tax_included,0))
+                lines['MontoItem'] = int(round(line.subtotal,0))
             if no_product:
                 lines['MontoItem'] = 0
             line_number += 1
