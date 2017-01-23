@@ -745,7 +745,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             if s.picking_type_id.code in ['outgoing', 'internal']: # @TODO diferenciar si es de salida o entrada para internal
                 s.responsable_envio = self.env.user.id
                 s.sii_result = 'NoEnviado'
-                self._timbrar()
+                s._timbrar()
         super(stock_picking,self).do_new_transfer()
 
     @api.multi
@@ -757,7 +757,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             if rec.sii_result not in ['','NoEnviado']:
                 raise UserError("El documento %s ya ha sido enviado o está en cola de envío" % rec.sii_document_number)
             if not rec.sii_xml_request:
-                self._timbrar(n_atencion)
+                rec._timbrar(n_atencion)
             rec.sii_result = "EnCola"
         self.env['sii.cola_envio'].create({
                                     'doc_ids':self.ids,
