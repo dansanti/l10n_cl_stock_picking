@@ -2,7 +2,6 @@
 
 
 from openerp import fields, models, api, _
-from openerp.exceptions import Warning
 from openerp.exceptions import UserError
 from datetime import datetime, timedelta
 import logging
