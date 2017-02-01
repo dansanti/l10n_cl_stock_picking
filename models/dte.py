@@ -436,7 +436,6 @@ version="1.0">
             obj = user = self[0].responsable_envio
         if not obj:
             obj = user = self.env.user
-        _logger.info(obj.name)
         if not obj.cert:
             obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
             if not obj or not obj.cert:
@@ -502,8 +501,12 @@ version="1.0">
         params['archivo'] = (file_name,envio_dte,"text/xml")
         multi  = urllib3.filepost.encode_multipart_formdata(params)
         headers.update({'Content-Length': '{}'.format(len(multi[0]))})
-        response = pool.request_encode_body('POST', url+post, params, headers)
-        retorno = {'sii_xml_response': response.data, 'sii_result': 'NoEnviado','sii_send_ident':''}
+        try:
+            response = pool.request_encode_body('POST', url+post, params, headers)
+            retorno = {'sii_xml_response': response.data, 'sii_result': 'NoEnviado','sii_send_ident':''}
+        except:
+            retorno = {'sii_xml_response': 'error', 'sii_result': 'NoEnviado','sii_send_ident':''}
+            return retorno
         if response.status != 200:
             return retorno
         respuesta_dict = xmltodict.parse(response.data)
@@ -804,20 +807,20 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
     def _receptor(self):
         Receptor = collections.OrderedDict()
-        if not self.partner_id.vat:
+        if not self.partner_id.commercial_partner_id.vat:
             raise UserError("Debe Ingresar RUT Receptor")
-        Receptor['RUTRecep'] = self.format_vat(self.partner_id.vat)
-        Receptor['RznSocRecep'] = self._acortar_str(self.partner_id.name, 100)
+        Receptor['RUTRecep'] = self.format_vat(self.partner_id.commercial_partner_id.vat)
+        Receptor['RznSocRecep'] = self._acortar_str(self.partner_id.commercial_partner_id.name, 100)
         if not self.activity_description:
             raise UserError(_('Seleccione giro del partner'))
         Receptor['GiroRecep'] = self._acortar_str(self.activity_description.name, 40)
-        if self.partner_id.phone:
-            Receptor['Contacto'] = self.partner_id.phone
-        if self.partner_id.dte_email:
-            Receptor['CorreoRecep'] = self.partner_id.dte_email
-        Receptor['DirRecep'] = self.partner_id.street+ ' ' + (self.partner_id.street2 or '')
-        Receptor['CmnaRecep'] = self.partner_id.city_id.name
-        Receptor['CiudadRecep'] = self.partner_id.city
+        if self.partner_id.commercial_partner_id.phone:
+            Receptor['Contacto'] = self.partner_id.commercial_partner_id.phone
+        if self.partner_id.commercial_partner_id.dte_email:
+            Receptor['CorreoRecep'] = self.partner_id.commercial_partner_id.dte_email
+        Receptor['DirRecep'] = (self.partner_id.commercial_partner_id.street) + ' ' + ((self.partner_id.commercial_partner_id.street2) or '')
+        Receptor['CmnaRecep'] = self.partner_id.commercial_partner_id.city_id.name
+        Receptor['CiudadRecep'] = self.partner_id.commercial_partner_id.city
         return Receptor
 
     def _transporte(self):
@@ -877,10 +880,10 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         result['TED']['DD']['TD'] = self.location_id.sii_document_class_id.sii_code
         result['TED']['DD']['F']  = self.get_folio()
         result['TED']['DD']['FE'] = self.min_date[:10]
-        if not self.partner_id.vat:
+        if not self.partner_id.commercial_partner_id.vat:
             raise UserError(_("Fill Partner VAT"))
-        result['TED']['DD']['RR'] = self.format_vat(self.partner_id.vat)
-        result['TED']['DD']['RSR'] = self._acortar_str(self.partner_id.name,40)
+        result['TED']['DD']['RR'] = self.format_vat(self.partner_id.commercial_partner_id.vat)
+        result['TED']['DD']['RSR'] = self._acortar_str(self.partner_id.commercial_partner_id.name,40)
         result['TED']['DD']['MNT'] = int(round(self.amount_total))
         if no_product:
             result['TED']['DD']['MNT'] = 0
@@ -1146,7 +1149,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
         _server = SOAPProxy(url, ns)
-        receptor = self.format_vat(self.partner_id.vat, True)
+        receptor = self.format_vat(self.partner_id.commercial_partner_id.vat, True)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))
         sii_code = str(self.location_id.sii_document_class_id.sii_code)
@@ -1175,7 +1178,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             self.sii_result = "Rechazado"
 
     @api.multi
-    def ask_for_dte_status(self):
+    def ask_for_dte_status(self, silent=False):
         try:
             signature_d = self.get_digital_signature_pem(
                 self.company_id)
@@ -1186,9 +1189,17 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                 signature_d['cert'])
             token = self.get_token(seed_firmado,self.company_id)
         except:
+            if silent:
+                _logger.info("erro")
+                return
             raise UserError(connection_status[response.e])
         if not self.sii_send_ident:
-            raise UserError('No se ha enviado aún el documento, aún está en cola de envío interna en odoo')
+            _logger.info(self.sii_document_number)
+            msg = 'No se ha enviado aún el documento %s, aún está en cola de envío interna en odoo'
+            if silent:
+                _logger.info(msg)
+                return
+            raise UserError( msg )
         xml_response = xmltodict.parse(self.sii_xml_response)
         if self.sii_result == 'Enviado':
             status = self._get_send_status(self.sii_send_ident, signature_d, token)
