@@ -416,9 +416,9 @@ version="1.0">
         if not obj:
             obj = user = self.env.user
         if not obj.cert:
-            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            obj = self.env['res.company'].browse([comp_id.id])
             if not obj or not obj.cert:
-                obj = self.env['res.company'].browse([comp_id.id])
+                obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
                 if not obj.cert or not user.id in obj.authorized_users_ids.ids:
                     return False
         signature_data = {
@@ -437,9 +437,9 @@ version="1.0">
         if not obj:
             obj = user = self.env.user
         if not obj.cert:
-            obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
+            obj = self.env['res.company'].browse([comp_id.id])
             if not obj or not obj.cert:
-                obj = self.env['res.company'].browse([comp_id.id])
+                obj = self.env['res.users'].search([("authorized_users_ids","=", user.id)])
                 if not obj.cert or not user.id in obj.authorized_users_ids.ids:
                     return False
         signature_data = {
