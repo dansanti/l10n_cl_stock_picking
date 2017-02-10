@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-
 from openerp import fields, models, api, _
 from openerp.exceptions import UserError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
