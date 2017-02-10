@@ -929,6 +929,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         # formateo sin remover indents
         ddxml = etree.tostring(root)
         timestamp = self.time_stamp()
+        if date( int(timestamp[:4]), int(timestamp[5:7]), int(timestamp[8:10])) < date(int(self.min_date[:4]), int(self.min_date[5:7]), int(self.min_date[8:10])):
+            raise UserError("La fecha de timbraje no puede ser menor a la fecha de emisión del documento")
         ddxml = ddxml.replace('2014-04-24T12:02:20', timestamp)
         frmt = self.signmessage(ddxml, keypriv, keypub)['firma']
         ted = (
