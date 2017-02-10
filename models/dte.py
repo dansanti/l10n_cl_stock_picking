@@ -748,21 +748,30 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                 s.responsable_envio = self.env.user.id
                 s.sii_result = 'NoEnviado'
                 s._timbrar()
+                self.env['sii.cola_envio'].create({
+                                            'doc_ids': [s.id],
+                                            'model': 'stock.picking',
+                                            'user_id': self.env.user.id,
+                                            'tipo_trabajo': 'pasivo',
+                                            'date_time': (datetime.now() + timedelta(hours=12)),
+                                            })
         super(stock_picking,self).do_new_transfer()
 
     @api.multi
-    def do_dte_send_picking(self, n_atencion=False):
+    def do_dte_send_picking(self, n_atencion=None):
+        ids = []
         if not isinstance(n_atencion, unicode):
             n_atencion = ''
         for rec in self:
             rec.responsable_envio = self.env.user.id
-            if rec.sii_result not in ['','NoEnviado']:
-                raise UserError("El documento %s ya ha sido enviado o está en cola de envío" % rec.sii_document_number)
-            if not rec.sii_xml_request:
-                rec._timbrar(n_atencion)
-            rec.sii_result = "EnCola"
-        self.env['sii.cola_envio'].create({
-                                    'doc_ids':self.ids,
+            if rec.sii_result in ['', 'NoEnviado', 'Rechazado']:
+                if not rec.sii_xml_request or rec.sii_result in [ 'Rechazado' ]:
+                    rec._timbrar(n_atencion)
+                rec.sii_result = "EnCola"
+                ids.append(rec.id)
+        if ids:
+            self.env['sii.cola_envio'].create({
+                                    'doc_ids': ids,
                                     'model':'stock.picking',
                                     'user_id':self.env.user.id,
                                     'tipo_trabajo':'envio',
@@ -876,7 +885,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
     @api.multi
     def get_barcode(self, no_product=False):
         ted = False
-        result['TED']['DD']['RE'] = self.format_vat(self.company_id.vat)
+        RutEmisor = self.format_vat(self.company_id.vat)
+        result['TED']['DD']['RE'] = RutEmisor
         result['TED']['DD']['TD'] = self.location_id.sii_document_class_id.sii_code
         result['TED']['DD']['F']  = self.get_folio()
         result['TED']['DD']['FE'] = self.min_date[:10]
@@ -895,6 +905,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
         resultcaf = self.get_caf_file()
         result['TED']['DD']['CAF'] = resultcaf['AUTORIZACION']['CAF']
+        if RutEmisor != result['TED']['DD']['CAF']['DA']['RE']:
+            raise UserError(_('NO coincide el Dueño del CAF : %s con el emisor Seleccionado: %s' %(result['TED']['DD']['CAF']['DA']['RE'], RutEmisor)))
         dte = result['TED']['DD']
         dicttoxml.set_debug(False)
         ddxml = '<DD>'+dicttoxml.dicttoxml(
