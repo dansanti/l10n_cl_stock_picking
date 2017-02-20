@@ -1203,7 +1203,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             token = self.get_token(seed_firmado,self.company_id)
         except:
             if silent:
-                _logger.info("erro")
+                _logger.info("Error Creación de token")
                 return
             raise UserError(connection_status[response.e])
         if not self.sii_send_ident:
