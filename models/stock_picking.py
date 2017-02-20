@@ -58,15 +58,18 @@ class StockPicking(models.Model):
             rec.amount_tax = amount_tax
             rec.amount_total = amount_untaxed + rec.amount_tax
 
+    def set_use_document(self):
+        return (self.picking_type_id and self.picking_type_id.code != 'incoming')
+
     amount_untaxed = fields.Monetary(compute='_compute_amount',
-                                  digits_compute=dp.get_precision('Account'),
-                                  string='Untaxed Amount')
+        digits_compute=dp.get_precision('Account'),
+        string='Untaxed Amount')
     amount_tax = fields.Monetary(compute='_compute_amount',
-                              digits_compute=dp.get_precision('Account'),
-                              string='Taxes')
+        digits_compute=dp.get_precision('Account'),
+        string='Taxes')
     amount_total = fields.Monetary(compute='_compute_amount',
-                                digits_compute=dp.get_precision('Account'),
-                                string='Total')
+        digits_compute=dp.get_precision('Account'),
+        string='Total')
     currency_id = fields.Many2one('res.currency', string='Currency',
         required=True, readonly=True, states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
@@ -76,18 +79,17 @@ class StockPicking(models.Model):
         string='Batch Number',
         readonly=True,
         help='Batch number for processing multiple invoices together')
-
     turn_issuer = fields.Many2one(
         'partner.activities',
-        'Giro Emisor', store=True, required=False,
+        'Giro Emisor',
+        store=True,
+        invisible=True,
         readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
-
     partner_turn = fields.Many2one(
         'partner.activities',
         'Giro',
         store=True,
         readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
-
     activity_description = fields.Many2one(
         'sii.activity.description',
         'Giro',
@@ -109,24 +111,49 @@ class StockPicking(models.Model):
         readonly=True)
     use_documents = fields.Boolean(
         string='Use Documents?',
-        readonly=True)
-    reference =fields.One2many('stock.picking.referencias','stock_picking_id', readonly=False, states={'done':[('readonly',True)]})
+        default=set_use_document,
+        )
+    reference =fields.One2many('stock.picking.referencias',
+       'stock_picking_id',
+       readonly=False, states={'done':[('readonly',True)]})
     transport_type = fields.Selection(
-        [('2','Despacho por cuenta de empresa'),('1','Despacho por cuenta del cliente'),('3','Despacho Externo'),('0','Sin Definir')],
+        [('2','Despacho por cuenta de empresa'),
+         ('1','Despacho por cuenta del cliente'),
+         ('3','Despacho Externo'),
+         ('0','Sin Definir')
+        ],
         string="Tipo de Despacho",
-        required=True,
         default="2",
         readonly=False, states={'done':[('readonly',True)]})
     move_reason = fields.Selection(
-        [('1','Operación constituye venta'),('2','Ventas por efectuar'), ('3','Consignaciones'),('4','Entrega Gratuita'),('5','Traslados Internos'),('6','Otros traslados no venta'),('7','Guía de Devolución'),('8','Traslado para exportación'),('9','Ventas para exportación')],
+        [('1','Operación constituye venta'),
+         ('2','Ventas por efectuar'),
+         ('3','Consignaciones'),
+         ('4','Entrega Gratuita'),
+         ('5','Traslados Internos'),
+         ('6','Otros traslados no venta'),
+         ('7','Guía de Devolución'),
+         ('8','Traslado para exportación'),
+         ('9','Ventas para exportación')
+        ],
         string='Razón del traslado',
         default="1",
-        required=True,
         readonly=False, states={'done':[('readonly',True)]})
-    vehicle = fields.Many2one('fleet.vehicle', string="Vehículo", readonly=False, states={'done':[('readonly',True)]})
-    chofer= fields.Many2one('res.partner', string="Chofer", readonly=False, states={'done':[('readonly',True)]})
-    patente = fields.Char(string="Patente", readonly=False, states={'done':[('readonly',True)]})
-    contact_id = fields.Many2one('res.partner',string="Contacto", readonly=False, states={'done':[('readonly',True)]})
+    vehicle = fields.Many2one('fleet.vehicle',
+      string="Vehículo",
+      readonly=False,
+      states={'done':[('readonly',True)]})
+    chofer= fields.Many2one('res.partner',
+        string="Chofer",
+        readonly=False,
+        states={'done':[('readonly',True)]})
+    patente = fields.Char(string="Patente",
+        readonly=False,
+        states={'done':[('readonly',True)]})
+    contact_id = fields.Many2one('res.partner',
+        string="Contacto",
+        readonly=False,
+        states={'done':[('readonly',True)]})
 
     @api.onchange('company_id')
     def _refreshData(self):

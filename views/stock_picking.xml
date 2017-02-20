@@ -18,7 +18,6 @@
             <field name="inherit_id" ref="stock.view_picking_form"/>
             <field name="arch" type="xml">
                 <form>
-                    <field name="use_documents" invisible="1"/>
                     <field name="sii_document_number" invisible="1"/>
                 </form>
                 <field name="partner_id" position="after">
@@ -29,6 +28,7 @@
 
                 <field name="origin" position="after">
                   <field name="contact_id" />
+                  <field name="use_documents"/>
                 </field>
 
                 <xpath expr="//page/field[@name='pack_operation_product_ids']/tree/field[@name='qty_done']" position="after">
@@ -67,25 +67,23 @@
 
                 <field name="company_id" position="after">
                     <field name="turn_issuer"
-                           attrs="{'required':[('use_documents','=',True)]}"
-                           options="{'no_create': True}"
-                           required="True"/>
+                           options="{'no_create': True}"/>
                 </field>
                 <field name="name" position="after">
                         <label string="- Next Number: " attrs="{'invisible': ['|',('name','!=',False),('state','!=','draft')]}" class="oe_inline"/>
                         <field name="next_number" attrs="{'invisible': ['|',('name','!=',False),('state','!=','draft')]}" class="oe_inline"/>
                 </field>
                 <field name="move_type" position="after">
-                  <field name="transport_type" />
-                  <field name="move_reason" />
+                  <field name="transport_type" attrs="{'required':[('use_documents', '=', True)]}"/>
+                  <field name="move_reason" attrs="{'required':[('use_documents', '=', True)]}"/>
                 </field>
                 <field name="carrier_id" position="attributes">
-                  <attribute name="attrs">{'invisible':[('transport_type', '!=', '3')], 'required':[('transport_type', '=', '3')]}</attribute>
+                  <attribute name="attrs">{'invisible':[('transport_type', '!=', '3')], 'required':[('transport_type', '=', '3'), ('use_documents', '=', True)]}</attribute>
                 </field>
                 <field name="carrier_id" position="after">
-                  <field name="vehicle" attrs="{'required':[('transport_type','=', '2')], 'invisible':[('transport_type','!=','2')]}"/>
-                  <field name="chofer" attrs="{'required':[('transport_type','=', '2')], 'invisible':[('transport_type','!=','2')]}"/>
-                  <field name="patente" attrs="{'required':[('transport_type','in', ['2'])]}"/>
+                  <field name="vehicle" attrs="{'required':[('transport_type','=', '2'), ('use_documents', '=', True)], 'invisible':[('transport_type','!=','2')]}"/>
+                  <field name="chofer" attrs="{'required':[('transport_type','=', '2'), ('use_documents', '=', True)], 'invisible':[('transport_type','!=','2')]}"/>
+                  <field name="patente" attrs="{'required':[('transport_type','in', ['2']), ('use_documents', '=', True)]}"/>
                 </field>
           </field>
 
