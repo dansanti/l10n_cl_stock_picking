@@ -155,6 +155,13 @@ class StockPicking(models.Model):
         readonly=False,
         states={'done':[('readonly',True)]})
 
+    def onchange_picking_type(self, cr, uid, ids, picking_type_id, partner_id, context=None):
+        res = super(StockPicking, self).onchange_picking_type(cr, uid, ids, picking_type_id, partner_id, context=context)
+        if picking_type_id:
+            picking_type = self.pool['stock.picking.type'].browse(cr, uid, picking_type_id, context=context)
+            res['value'].update({'use_documents': (picking_type.code not in [ "incoming" ])})
+        return res
+
     @api.onchange('company_id')
     def _refreshData(self):
         if self.move_lines:
