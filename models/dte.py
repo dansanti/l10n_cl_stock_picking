@@ -739,6 +739,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
     @api.multi
     def do_new_transfer(self):
         for s in self:
+            if not s.use_documents:
+                continue
             if not s.sii_document_number and s.location_id.sequence_id.is_dte:
                 s.sii_document_number = s.location_id.sequence_id.next_by_id()
                 document_number = (s.location_id.sii_document_class_id.doc_code_prefix or '') + s.sii_document_number
