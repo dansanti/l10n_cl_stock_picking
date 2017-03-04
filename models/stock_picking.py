@@ -307,7 +307,6 @@ class StockPicking(models.Model):
                 val_dict['name'] = it['name']
             if 'price_unit' in it:
                 val_dict['price_unit'] = it['price_unit']
-            _logger.info(it)
             if 'name' in it :
                 if (key[0],it['name']) in prevals:
                     prevals[(key[0],it['name'])].append(val_dict)
@@ -425,11 +424,7 @@ class StockPackOperation(models.Model):
     @api.onchange('price_unit','qty_done','product_id','operation_line_tax_ids')
     def _compute_amount(self):
         for rec in self:
-            currency = rec.picking_id.currency_id or None
-            taxes = False
-            if rec.operation_line_tax_ids:
-                taxes = rec.operation_line_tax_ids.compute_all(rec.price_unit, currency, rec.qty_done, product=rec.product_id, partner=rec.picking_id.partner_id, discount=rec.discount)
-            rec.subtotal = taxes['total_excluded'] if taxes else rec.qty_done * ( rec.price_unit * (1 - rec.discount/100.0))
+            rec.subtotal rec.qty_done * ( rec.price_unit * (1 - rec.discount/100.0))
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
@@ -464,12 +459,8 @@ class StockMove(models.Model):
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
     def _compute_amount(self):
         for rec in self:
-            currency = rec.picking_id.currency_id or None
             price = rec.price_unit * (1 - (rec.discount or 0.0) / 100.0)
-            taxes = False
-            if rec.move_line_tax_ids:
-                taxes = rec.move_line_tax_ids.compute_all(price, currency, rec.product_uom_qty, product=rec.product_id, partner=rec.picking_id.partner_id)
-            rec.subtotal = price_subtotal_signed = taxes['total_excluded'] if taxes else rec.product_uom_qty * price
+            rec.subtotal = rec.product_uom_qty * price
 
     name = fields.Char(string="Nombre")
 
@@ -490,7 +481,8 @@ class StockMove(models.Model):
     discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
     currency_id = fields.Many2one('res.currency', string='Currency',
-        required=True, readonly=True, states={'draft': [('readonly', False)]},
+        required=True,
+        readonly=True, states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
         track_visibility='always')
 
