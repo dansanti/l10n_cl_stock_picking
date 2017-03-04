@@ -261,7 +261,9 @@ class StockPicking(models.Model):
         # Lots will go into pack operation lot object
         for quant, dest_location_id in quants_suggested_locations.items():
             key = (quant.product_id.id, quant.package_id.id, quant.owner_id.id, quant.location_id.id, dest_location_id)
-            qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': quant.name,'price_unit': quant.price_unit}])
+            name = quant.name if quant.name else quant.product_id.name
+            price_unit = quant.produt_id.lst_price if quant.price_unit == 0 else quant.price_unit
+            qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': name,'price_unit': price_unit}])
             if quant.product_id.tracking != 'none' and quant.lot_id:
                 lots_grouped.setdefault(key, {}).setdefault(quant.lot_id.id, 0.0)
                 lots_grouped[key][quant.lot_id.id] += quant.qty
