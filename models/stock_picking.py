@@ -426,7 +426,7 @@ class StockPackOperation(models.Model):
     @api.onchange('price_unit','qty_done','product_id','operation_line_tax_ids')
     def _compute_amount(self):
         for rec in self:
-            rec.subtotal rec.qty_done * ( rec.price_unit * (1 - rec.discount/100.0))
+            rec.subtotal = rec.qty_done * ( rec.price_unit * (1 - rec.discount/100.0))
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
