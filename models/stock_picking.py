@@ -435,7 +435,8 @@ class StockMove(models.Model):
     def create(self,vals):
         if 'picking_id' in vals:
             picking = self.env['stock.picking'].browse(vals['picking_id'])
-            vals['company_id'] = picking.company_id.id
+            if picking and picking.company_id:
+                vals['company_id'] = picking.company_id.id
         return super(StockMove,self).create(vals)
 
     @api.depends('picking_id.reference')
