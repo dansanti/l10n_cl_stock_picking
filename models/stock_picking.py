@@ -496,7 +496,9 @@ class MQ(models.Model):
 
     price_unit = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
                                    string='Price')
-    currency_id = fields.Many2one('res.currency', string='Currency',
-        required=True, readonly=True, states={'draft': [('readonly', False)]},
+    currency_id = fields.Many2one('res.currency',
+        string='Currency',
+        required=True,
+        readonly=True,
         default=lambda self: self.env.user.company_id.currency_id,
         track_visibility='always')
