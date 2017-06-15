@@ -445,19 +445,19 @@ class StockMove(models.Model):
         for rec in self:
             if rec.picking_id.reference:
                 for ref in rec.picking_id.reference:
-                    if ref.sii_referencia_TpoDocRef.sii_code in ['34','33']:# factura venta
+                    if ref.sii_referencia_TpoDocRef.sii_code in [34,33]:
                         inv = self.env['account.invoice'].search([('sii_document_number','=',ref.origen)])
-                        for l in inv.invoice_lines:
+                        for l in inv.invoice_line_ids:
                             if l.product_id.id == rec.product_id.id:
                                 rec.price_unit = l.price_unit
-                                rec.subtotal = l.subtotal
+                                rec.subtotal = l.price_subtotal
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
                 rec.price_unit = rec.product_id.lst_price
                 if not rec.name:
-                	rec.name = rec.product_id.name
-                rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
+                    rec.name = rec.product_id.name
+                rec.move_line_tax_ids = rec.product_id.taxes_id
 
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
     def _compute_amount(self):
