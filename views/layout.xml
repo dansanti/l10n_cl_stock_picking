@@ -67,7 +67,7 @@
                         <div name="company_address"/>
                       </div>
                   </div>
-              <div class="page" style="padding-top:85px;">
+              <div class="page" style="padding-top:90px;">
                   <div class="row" style="border: 2px solid black;">
                       <table class="table cl_invoice">
                         <tbody>
@@ -92,7 +92,7 @@
                           <tr>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Giro:</strong></td>
                             <td style="border-top:0px !important;padding:4px !important;min-width:500px;max-width:500px;"><span t-field="o.activity_description.name"/></td>
-                            <td style="border-top:0px !important;padding:4px !important;"><strong>Condición Pago:</strong></td>
+                            <td style="border-top:0px !important;padding:4px !important;"><strong>Condición de Pago:</strong></td>
                           </tr>
                           <tr>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Contacto:</strong></td>
@@ -250,12 +250,12 @@
                    </div>
 
                   <div class="row">
-                      <div class="col-xs-12" style="border: 1px solid black;height:16px;font-size:12px !important;">
+                      <div class="col-xs-12" style="border: 1px solid black;height:20px;font-size:15px !important;">
                         <div class="col-xs-4">
                             <strong>Nombre:</strong>
                         </div>
                       </div>
-                      <div class="col-xs-12" style="border: 1px solid black;height:16px;font-size:12px !important;">
+                      <div class="col-xs-12" style="border: 1px solid black;height:20px;font-size:15px !important;">
                         <div class="col-xs-7">
                             <strong>R.U.T.:</strong>
                         </div>
@@ -263,7 +263,7 @@
                             <strong>FECHA:</strong>
                         </div>
                       </div>
-                      <div class="col-xs-12" style="border: 1px solid black;height:16px;font-size:12px !important;">
+                      <div class="col-xs-12" style="border: 1px solid black;height:20px; font-size:15px !important;">
                         <div class="col-xs-7">
                             <strong>RECINTO:</strong>
                         </div>
