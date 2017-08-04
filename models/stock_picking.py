@@ -261,7 +261,8 @@ class StockPicking(models.Model):
         # Lots will go into pack operation lot object
         for quant, dest_location_id in quants_suggested_locations.items():
             key = (quant.product_id.id, quant.package_id.id, quant.owner_id.id, quant.location_id.id, dest_location_id)
-            name = quant.description if quant.description else '[' + quant.product_id.default_code +'] ' + quant.product_id.name
+            form_name = '[' + quant.product_id.default_code +'] ' + quant.product_id.name if quant.product_id.default_code else quant.product_id.name
+            name = quant.description if quant.description else form_name
             price_unit = quant.product_id.lst_price if quant.price_unit == 0 else quant.price_unit
             qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': name,'price_unit': price_unit}])
             if quant.product_id.tracking != 'none' and quant.lot_id:
@@ -445,19 +446,19 @@ class StockMove(models.Model):
         for rec in self:
             if rec.picking_id.reference:
                 for ref in rec.picking_id.reference:
-                    if ref.sii_referencia_TpoDocRef.sii_code in [34,33]:
+                    if ref.sii_referencia_TpoDocRef.sii_code in ['34','33']:# factura venta
                         inv = self.env['account.invoice'].search([('sii_document_number','=',ref.origen)])
-                        for l in inv.invoice_line_ids:
+                        for l in inv.invoice_lines:
                             if l.product_id.id == rec.product_id.id:
                                 rec.price_unit = l.price_unit
-                                rec.subtotal = l.price_subtotal
+                                rec.subtotal = l.subtotal
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
                 rec.price_unit = rec.product_id.lst_price
                 if not rec.name:
-                    rec.name = rec.product_id.name
-                rec.move_line_tax_ids = rec.product_id.taxes_id
+                	rec.name = rec.product_id.name
+                rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
     def _compute_amount(self):
