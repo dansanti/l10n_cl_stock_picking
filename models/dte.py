@@ -727,8 +727,9 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             c += 1
         return cadena
 
-    @api.multi
-    def do_new_transfer(self):
+    @api.model
+    def do_transfer(self):
+        super(stock_picking,self).do_transfer()
         for s in self:
             if not s.use_documents:
                 continue
@@ -747,7 +748,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                                             'tipo_trabajo': 'pasivo',
                                             'date_time': (datetime.now() + timedelta(hours=12)),
                                             })
-        super(stock_picking,self).do_new_transfer()
+
 
     @api.multi
     def do_dte_send_picking(self, n_atencion=None):
@@ -985,6 +986,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             picking_lines.extend([{'Detalle': lines}])
             if 'IndExe' in lines:
             	taxInclude = False
+        if len(picking_lines) == 0:
+            raise UserError(_('No se puede emitir una guía sin líneas'))
         return {
                 'picking_lines': picking_lines,
                 'MntExe':MntExe,
