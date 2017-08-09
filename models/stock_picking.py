@@ -72,8 +72,12 @@ class StockPicking(models.Model):
     amount_total = fields.Monetary(compute='_compute_amount',
         digits_compute=dp.get_precision('Account'),
         string='Total')
-    currency_id = fields.Many2one('res.currency', string='Currency',
-        required=True, readonly=True, states={'draft': [('readonly', False)]},
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Currency',
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
         track_visibility='always')
     sii_batch_number = fields.Integer(
@@ -421,8 +425,12 @@ class StockPackOperation(models.Model):
             string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
     discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
                                  string='Discount (%)')
-    currency_id = fields.Many2one('res.currency', string='Currency',
-        required=True, readonly=True, states={'draft': [('readonly', False)]},
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Currency',
+        required=True,
+        readonly=True,
+        states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
         track_visibility='always')
 
@@ -529,7 +537,7 @@ class MQ(models.Model):
             'package_id': dest_package_id,
             'description': move.name,
             'price_unit': move.price_unit,
-            'currency_id': move.currency_id,
+            'currency_id': move.currency_id.id,
         }
         if move.location_id.usage == 'internal':
             #if we were trying to move something from an internal location and reach here (quant creation),
