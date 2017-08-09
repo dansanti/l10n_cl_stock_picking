@@ -727,7 +727,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             c += 1
         return cadena
 
-    @api.model
+    @api.multi
     def do_transfer(self):
         super(stock_picking,self).do_transfer()
         for s in self:
