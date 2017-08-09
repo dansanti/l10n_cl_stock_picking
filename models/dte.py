@@ -966,12 +966,10 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             if line.product_id.default_code:
                 lines['NmbItem'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),80)
             qty = round(line.qty_done, 4)
+            if qty <=0:
+                raise UserError("¡No puede ser menor o igual que 0!, tiene líneas con cantidad realiada 0")
             if not no_product:
                 lines['QtyItem'] = qty
-            if qty == 0 and not no_product:
-                lines['QtyItem'] = 1
-            elif qty < 0:
-                raise UserError("NO puede ser menor que 0")
             if not no_product:
                 lines['UnmdItem'] = line.product_uom_id.name[:4]
                 if line.price_unit > 0:
