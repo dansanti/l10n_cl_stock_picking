@@ -978,7 +978,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             if line.discount > 0:
                 lines['DescuentoPct'] = line.discount
                 lines['DescuentoMonto'] = int(round((((line.discount / 100) * lines['PrcItem'])* qty)))
-            elif not no_product :
+            if not no_product :
                 lines['MontoItem'] = int(round(line.subtotal,0))
             if no_product:
                 lines['MontoItem'] = 0
