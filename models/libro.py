@@ -71,11 +71,6 @@ except ImportError:
     _logger.info('Cannot import dicttoxml library')
 
 try:
-    from elaphe import barcode
-except ImportError:
-    _logger.info('Cannot import elaphe library')
-
-try:
     import M2Crypto
 except ImportError:
     _logger.info('Cannot import M2Crypto library')
