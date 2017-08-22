@@ -787,7 +787,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         #if self.print_ticket:
         #    IdDoc['TpoImpresion'] = "N" #@TODO crear opcion de ticket
         if taxInclude and MntExe == 0 :
-        	IdDoc['MntBruto'] = 1
+            IdDoc['MntBruto'] = 1
         #IdDoc['FmaPago'] = self.forma_pago or 1
         #IdDoc['FchVenc'] = self.date_due or datetime.strftime(datetime.now(), '%Y-%m-%d')
         return IdDoc
@@ -809,20 +809,22 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
     def _receptor(self):
         Receptor = collections.OrderedDict()
-        if not self.partner_id.commercial_partner_id.vat:
+        partner_id = self.partner_id or self.company_id.partner_id
+        if not partner_id.commercial_partner_id.vat :
             raise UserError("Debe Ingresar RUT Receptor")
-        Receptor['RUTRecep'] = self.format_vat(self.partner_id.commercial_partner_id.vat)
-        Receptor['RznSocRecep'] = self._acortar_str(self.partner_id.commercial_partner_id.name, 100)
-        if not self.activity_description:
+        Receptor['RUTRecep'] = self.format_vat(partner_id.commercial_partner_id.vat)
+        Receptor['RznSocRecep'] = self._acortar_str(partner_id.commercial_partner_id.name, 100)
+        activity_description = self.activity_description or partner_id.activity_description
+        if not activity_description:
             raise UserError(_('Seleccione giro del partner'))
-        Receptor['GiroRecep'] = self._acortar_str(self.activity_description.name, 40)
-        if self.partner_id.commercial_partner_id.phone:
-            Receptor['Contacto'] = self.partner_id.commercial_partner_id.phone
-        if self.partner_id.commercial_partner_id.dte_email:
-            Receptor['CorreoRecep'] = self.partner_id.commercial_partner_id.dte_email
-        Receptor['DirRecep'] = (self.partner_id.commercial_partner_id.street) + ' ' + ((self.partner_id.commercial_partner_id.street2) or '')
-        Receptor['CmnaRecep'] = self.partner_id.commercial_partner_id.city_id.name
-        Receptor['CiudadRecep'] = self.partner_id.commercial_partner_id.city
+        Receptor['GiroRecep'] = self._acortar_str(activity_description.name, 40)
+        if partner_id.commercial_partner_id.phone:
+            Receptor['Contacto'] = partner_id.commercial_partner_id.phone
+        if partner_id.commercial_partner_id.dte_email:
+            Receptor['CorreoRecep'] = partner_id.commercial_partner_id.dte_email
+        Receptor['DirRecep'] = (partner_id.commercial_partner_id.street) + ' ' + ((partner_id.commercial_partner_id.street2) or '')
+        Receptor['CmnaRecep'] = partner_id.commercial_partner_id.city_id.name
+        Receptor['CiudadRecep'] = partner_id.commercial_partner_id.city
         return Receptor
 
     def _transporte(self):
@@ -844,9 +846,10 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                 Transporte['Chofer'] = collections.OrderedDict()
                 Transporte['Chofer']['RUTChofer'] = self.format_vat(self.chofer.vat)
                 Transporte['Chofer']['NombreChofer'] = self.chofer.name[:30]
-        Transporte['DirDest'] = (self.partner_id.street or '')+ ' '+ (self.partner_id.street2 or '')
-        Transporte['CmnaDest'] = self.partner_id.state_id.name or ''
-        Transporte['CiudadDest'] = self.partner_id.city or ''
+        partner_id = self.partner_id or self.company_id.partner_id
+        Transporte['DirDest'] = (partner_id.street or '')+ ' '+ (partner_id.street2 or '')
+        Transporte['CmnaDest'] = partner_id.state_id.name or ''
+        Transporte['CiudadDest'] = partner_id.city or ''
         #@TODO SUb Area Aduana
         return Transporte
 
@@ -877,16 +880,17 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 
     @api.multi
     def get_barcode(self, no_product=False):
+        partner_id = self.partner_id or self.company_id.partner_id
         ted = False
         RutEmisor = self.format_vat(self.company_id.vat)
         result['TED']['DD']['RE'] = RutEmisor
         result['TED']['DD']['TD'] = self.location_id.sii_document_class_id.sii_code
         result['TED']['DD']['F']  = self.get_folio()
         result['TED']['DD']['FE'] = self.min_date[:10]
-        if not self.partner_id.commercial_partner_id.vat:
+        if not partner_id.commercial_partner_id.vat:
             raise UserError(_("Fill Partner VAT"))
-        result['TED']['DD']['RR'] = self.format_vat(self.partner_id.commercial_partner_id.vat)
-        result['TED']['DD']['RSR'] = self._acortar_str(self.partner_id.commercial_partner_id.name,40)
+        result['TED']['DD']['RR'] = self.format_vat(partner_id.commercial_partner_id.vat)
+        result['TED']['DD']['RSR'] = self._acortar_str(partner_id.commercial_partner_id.name,40)
         result['TED']['DD']['MNT'] = int(round(self.amount_total))
         if no_product:
             result['TED']['DD']['MNT'] = 0
@@ -985,7 +989,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             line_number += 1
             picking_lines.extend([{'Detalle': lines}])
             if 'IndExe' in lines:
-            	taxInclude = False
+                taxInclude = False
         if len(picking_lines) == 0:
             raise UserError(_('No se puede emitir una guía sin líneas'))
         return {
@@ -1153,10 +1157,11 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         return status
 
     def _get_dte_status(self, signature_d, token):
+        partner_id = self.partner_id or self.company_id.partner_id
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
         _server = SOAPProxy(url, ns)
-        receptor = self.format_vat(self.partner_id.commercial_partner_id.vat, True)
+        receptor = self.format_vat(partner_id.commercial_partner_id.vat, True)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))
         sii_code = str(self.location_id.sii_document_class_id.sii_code)
@@ -1173,8 +1178,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         self.sii_message = respuesta
         resp = xmltodict.parse(respuesta)
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == '2':
-        	status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
-        	return status
+            status = {'warning':{'title':_("Error code: 2"), 'message': _(resp['SII:RESPUESTA']['SII:RESP_HDR']['GLOSA'])}}
+            return status
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == "EPR":
             self.sii_result = "Proceso"
             if resp['SII:RESPUESTA']['SII:RESP_BODY']['RECHAZADOS'] == "1":
