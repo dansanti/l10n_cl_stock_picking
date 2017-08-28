@@ -659,8 +659,9 @@ exponent. AND DIGEST""")
         #det['Operacion'] =[1,2]
         det['TpoOper'] = rec.move_reason
         det['FchDoc'] = rec.date[:10]
-        det['RUTDoc'] = self.format_vat(rec.partner_id.vat)
-        det['RznSoc'] = rec.partner_id.name[:50]
+        det['RUTDoc'] = self.format_vat(rec.partner_id.vat or self.company_id.partner_id.vat)
+        name =  rec.partner_id.name or self.company_id.name
+        det['RznSoc'] = name[:50]
         tasa = '19.00'
 
         if rec.amount_untaxed > 0:
@@ -814,7 +815,7 @@ exponent. AND DIGEST""")
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
         _server = SOAPProxy(url, ns)
-        receptor = self.format_vat(self.partner_id.vat)
+        receptor = self.format_vat(self.partner_id.vat or self.company_id.partner_id.vat)
         date_invoice = datetime.strptime(self.date_invoice, "%Y-%m-%d").strftime("%d-%m-%Y")
         respuesta = _server.getEstDte(signature_d['subject_serial_number'][:8], str(signature_d['subject_serial_number'][-1]),
                 self.company_id.vat[2:-1],self.company_id.vat[-1], receptor[:8],receptor[2:-1],str(self.document_class_id.sii_code), str(self.sii_document_number),
