@@ -84,7 +84,8 @@ class StockPicking(models.Model):
         copy=False,
         string='Batch Number',
         readonly=True,
-        help='Batch number for processing multiple invoices together')
+        help='Batch number for processing multiple invoices together',
+    )
     turn_issuer = fields.Many2one(
         'partner.activities',
         'Giro Emisor',
@@ -391,9 +392,8 @@ class StockPackOperation(models.Model):
             if vals['product_id'] == o.product_id.id and o.name == vals['name']:
                 vals['subtotal'] = o.subtotal
                 vals['discount'] = o.discount
-                vals['operation_line_tax_ids'] = o.move_line_tax_ids.ids
-
-        super(StockPackOperation,self).create(cr,uid,vals,context=context)
+                vals['operation_line_tax_ids'] = [(6, 0, o.move_line_tax_ids.ids)]
+        super(StockPackOperation,self).create( cr, uid, vals, context=context)
 
     @api.depends('picking_id.move_lines_related')
     @api.onchange('name', 'qty_done')
@@ -411,22 +411,36 @@ class StockPackOperation(models.Model):
                 rec.operation_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
     name = fields.Char(string="Nombre")
-
     subtotal = fields.Monetary(
-        compute='_compute_amount', digits_compute=dp.get_precision('Account'),
+        compute='_compute_amount',
+        digits_compute=dp.get_precision('Account'),
         string='Subtotal')
     price_unit = fields.Monetary(
         digits_compute=dp.get_precision('Product Price'),
         string='Price',
     )
-    price_untaxed = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
-        string='Price Untaxed')
-
-    operation_line_tax_ids = fields.Many2many('account.tax',
-        'operation_line_tax', 'operation_line_id', 'tax_id',
-            string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
-    discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
-                                 string='Discount (%)')
+    price_untaxed = fields.Monetary(
+        digits_compute=dp.get_precision('Product Price'),
+        string='Price Untaxed',
+    )
+    operation_line_tax_ids = fields.Many2many(
+        'account.tax',
+        'operation_line_tax',
+        'operation_line_id',
+        'tax_id',
+        string='Taxes',
+        domain=[
+            ('type_tax_use','!=','none'),
+            '|',
+            ('active', '=', False),
+            ('active', '=', True)
+        ],
+        oldname='invoice_line_tax_id'
+    )
+    discount = fields.Monetary(
+        digits_compute=dp.get_precision('Discount'),
+        string='Discount (%)',
+    )
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',
@@ -502,7 +516,6 @@ class StockMove(models.Model):
         domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)],
         oldname='invoice_line_tax_id',
     )
-
     discount = fields.Monetary(
         digits_compute=dp.get_precision('Discount'),
         string='Discount (%)',
@@ -530,7 +543,22 @@ class MQ(models.Model):
         required=True,
         readonly=True,
         default=lambda self: self.env.user.company_id.currency_id,
-        track_visibility='always')
+        track_visibility='always'
+    )
+    quant_line_tax_ids = fields.Many2many(
+        'account.tax',
+        'quant_line_tax_ids',
+        'quant_line_id',
+        'tax_id',
+        string='Taxes',
+        domain=[
+            ('type_tax_use','!=','none'),
+            '|',
+            ('active', '=', False),
+            ('active', '=', True)
+        ],
+        oldname='invoice_line_tax_id',
+    )
 
     def _quant_create(self, cr, uid, qty, move, lot_id=False, owner_id=False, src_package_id=False, dest_package_id=False,
                       force_location_from=False, force_location_to=False, context=None):
@@ -555,6 +583,7 @@ class MQ(models.Model):
             'description': move.name,
             'price_unit': move.price_unit_sales,
             'currency_id': move.currency_id.id,
+            'quant_line_tax_ids': [( 6, 0, move.move_line_tax_ids.ids )],
         }
         if move.location_id.usage == 'internal':
             #if we were trying to move something from an internal location and reach here (quant creation),
