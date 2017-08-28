@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
-  <template id="dte_stock_picking" inherit_id="stock.report_picking" >
+  <template id="dte_stock_picking" name="dte_stock_picking" inherit_id="stock.report_picking" >
       <t t-call="report.html_container" position="replace">
           <t t-foreach="docs" t-as="o">
             <t t-set="partner_id" t-value="o.partner_id or o.company_id.partner_id" />

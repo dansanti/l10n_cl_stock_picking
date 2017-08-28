@@ -190,7 +190,7 @@ class StockPicking(models.Model):
                 for m in rec.pack_operation_product_ids:
                     for l in rec.move_lines_related:
                         if l.product_id.id == m.product_id.id:
-                            m.price_unit = l.price_unit
+                            m.price_unit = l.price_unit_sales
                             m.discount = l.discount
                             m.operation_line_tax_ids = l.move_line_tax_ids
                 if not m.price_unit > 0 or not m.name:
@@ -267,7 +267,7 @@ class StockPicking(models.Model):
         # Lots will go into pack operation lot object
         for quant, dest_location_id in quants_suggested_locations.items():
             key = (quant.product_id.id, quant.package_id.id, quant.owner_id.id, quant.location_id.id, dest_location_id)
-            form_name = '[' + quant.product_id.default_code +'] ' + quant.product_id.name if quant.product_id.default_code else quant.product_id.name
+            form_name = '[' + quant.product_id.default_code +'] ' + quant.product_id.name
             name = quant.description if quant.description else form_name
             price_unit = quant.product_id.lst_price if quant.price_unit == 0 else quant.price_unit
             qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': name,'price_unit': price_unit}])
@@ -348,12 +348,12 @@ class StockPicking(models.Model):
                 move_quants = move.reserved_quant_ids
                 quant_obj = self.pool.get('stock.quant')
                 for mq in move_quants:
-                    quant_obj.write(cr, SUPERUSER_ID, mq.id, {'price_unit': move.price_unit, 'name': move.name}, context=context)
+                    quant_obj.write(cr, SUPERUSER_ID, mq.id, {'price_unit': move.price_unit_sales, 'name': move.name}, context=context)
                 picking_quants += move_quants
                 forced_qty = (move.state == 'assigned') and move.product_qty - sum([x.qty for x in move_quants]) or 0
                 #if we used force_assign() on the move, or if the move is incoming, forced_qty > 0
                 if float_compare(forced_qty, 0, precision_rounding=move.product_id.uom_id.rounding) > 0:
-                    forced_qties.extend([{'key':move.product_id,'value': forced_qty, 'name' : move.name ,'price_unit': move.price_unit}])
+                    forced_qties.extend([{'key':move.product_id,'value': forced_qty, 'name' : move.name ,'price_unit': move.price_unit_sales}])
             for vals in self._prepare_pack_ops(cr, uid, picking, picking_quants, forced_qties, context=context):
                 vals['fresh_record'] = False
                 pack_operation_obj.create(cr, uid, vals, context=context)
@@ -401,7 +401,7 @@ class StockPackOperation(models.Model):
         for rec in self:
             for l in rec.picking_id.move_lines_related:
                 if l.product_id.id == rec.product_id.id and l.name == rec.name:
-                    rec.price_unit = l.price_unit
+                    rec.price_unit = l.price_unit_sales
                     rec.discount = l.discount
                     rec.operation_line_tax_ids = l.move_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
@@ -415,8 +415,10 @@ class StockPackOperation(models.Model):
     subtotal = fields.Monetary(
         compute='_compute_amount', digits_compute=dp.get_precision('Account'),
         string='Subtotal')
-    price_unit = fields.Monetary(digits_compute=dp.get_precision('Product Price'),
-                                   string='Price')
+    price_unit = fields.Monetary(
+        digits_compute=dp.get_precision('Product Price'),
+        string='Price',
+    )
     price_untaxed = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
         string='Price Untaxed')
 
@@ -460,12 +462,12 @@ class StockMove(models.Model):
                         inv = self.env['account.invoice'].search([('sii_document_number','=',ref.origen)])
                         for l in inv.invoice_lines:
                             if l.product_id.id == rec.product_id.id:
-                                rec.price_unit = l.price_unit
+                                rec.price_unit_sales = l.price_unit
                                 rec.subtotal = l.subtotal
                                 rec.discount = l.discount
                                 rec.move_line_tax_ids = l.invoice_line_tax_ids
-            if not rec.price_unit > 0 or not rec.name:
-                rec.price_unit = rec.product_id.lst_price
+            if not rec.price_unit_sales > 0 or not rec.name:
+                rec.price_unit_sales = rec.product_id.lst_price
                 if not rec.name:
                 	rec.name = rec.product_id.name
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
@@ -473,7 +475,7 @@ class StockMove(models.Model):
     @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty')
     def _compute_amount(self):
         for rec in self:
-            price = rec.price_unit * (1 - (rec.discount or 0.0) / 100.0)
+            price = rec.price_unit_sales * (1 - (rec.discount or 0.0) / 100.0)
             rec.subtotal = rec.product_uom_qty * price
 
     name = fields.Char(string="Nombre")
@@ -482,23 +484,36 @@ class StockMove(models.Model):
         compute='_compute_amount', digits_compute=dp.get_precision('Product Price'),
         string='Subtotal')
 
-    price_unit = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
-                                   string='Price')
+    price_unit_sales = fields.Monetary(
+        digits_compute=dp.get_precision('Product Price'),
+        string='Price',
+    )
     price_untaxed = fields.Monetary(
-        compute='_sale_prices', digits_compute=dp.get_precision('Product Price'),
-        string='Price Untaxed')
+        compute='_sale_prices',
+        digits_compute=dp.get_precision('Product Price'),
+        string='Price Untaxed',
+    )
+    move_line_tax_ids = fields.Many2many(
+        'account.tax',
+        'move_line_tax_ids',
+        'move_line_id',
+        'tax_id',
+        string='Taxes',
+        domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)],
+        oldname='invoice_line_tax_id',
+    )
 
-    move_line_tax_ids = fields.Many2many('account.tax',
-        'move_line_tax_ids', 'move_line_id', 'tax_id',
-            string='Taxes', domain=[('type_tax_use','!=','none'), '|', ('active', '=', False), ('active', '=', True)], oldname='invoice_line_tax_id')
-
-    discount = fields.Monetary(digits_compute=dp.get_precision('Discount'),
-                                 string='Discount (%)')
+    discount = fields.Monetary(
+        digits_compute=dp.get_precision('Discount'),
+        string='Discount (%)',
+    )
     currency_id = fields.Many2one('res.currency', string='Currency',
         required=True,
-        readonly=True, states={'draft': [('readonly', False)]},
+        readonly=True,
+        states={'draft': [('readonly', False)]},
         default=lambda self: self.env.user.company_id.currency_id,
-        track_visibility='always')
+        track_visibility='always',
+    )
 
 class MQ(models.Model):
     _inherit = 'stock.quant'
@@ -506,8 +521,10 @@ class MQ(models.Model):
     description = fields.Char(
         string="Description",
     )
-    price_unit = fields.Monetary( digits_compute=dp.get_precision('Product Price'),
-                                   string='Price')
+    price_unit = fields.Monetary(
+        digits_compute=dp.get_precision('Product Price'),
+        string='Price',
+    )
     currency_id = fields.Many2one('res.currency',
         string='Currency',
         required=True,
@@ -536,7 +553,7 @@ class MQ(models.Model):
             'owner_id': owner_id,
             'package_id': dest_package_id,
             'description': move.name,
-            'price_unit': move.price_unit,
+            'price_unit': move.price_unit_sales,
             'currency_id': move.currency_id.id,
         }
         if move.location_id.usage == 'internal':

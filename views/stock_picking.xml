@@ -96,7 +96,7 @@
             <field name="arch" type="xml">
               <field name="product_uom" position="after">
                 <field name="name"/>
-                <field name="price_unit"/>
+                <field name="price_unit_sales"/>
                 <field name="move_line_tax_ids" widget="many2many_tags"  domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
                 <field name="discount" />
                 <field name="subtotal"/>
@@ -113,7 +113,7 @@
                 <xpath expr="//group/group[last()]" position="before">
                     <group>
                       <field name="name"/>
-                        <field name="price_unit"/>
+                        <field name="price_unit_sales"/>
                         <field name="move_line_tax_ids" widget="many2many_tags" domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
                         <field name="discount"/>
                         <field name="currency_id" invisible="1"/>
