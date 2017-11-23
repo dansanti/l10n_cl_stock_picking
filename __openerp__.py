@@ -31,5 +31,5 @@
         'views/libro_guias.xml',
         'wizard/masive_send_dte.xml',
     ],
-    'version': '9.0.5.2',
+    'version': '9.0.5.3',
 }
