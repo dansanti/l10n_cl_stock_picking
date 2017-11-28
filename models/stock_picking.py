@@ -161,6 +161,10 @@ class StockPicking(models.Model):
         string="Contacto",
         readonly=False,
         states={'done':[('readonly',True)]})
+    invoiced = fields.Boolean(
+        string='Invoiced?',
+        readonly=True,
+    )
 
     def onchange_picking_type(self, cr, uid, ids, picking_type_id, partner_id, context=None):
         res = super(StockPicking, self).onchange_picking_type(cr, uid, ids, picking_type_id, partner_id, context=context)

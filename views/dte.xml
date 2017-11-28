@@ -21,6 +21,7 @@
                             <field name='sii_result' widget="statusbar"/>
                         </header>
                         <group>
+                            <field name="invoiced" />
                             <field name="responsable_envio" invisible="True" readonly="True"/>
                             <field name="canceled" />
                             <field name='sii_batch_number' readonly="1"/>
