@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from openerp import fields, models, api, _
-from openerp.exceptions import UserError
+from odoo import fields, models, api, _
+from odoo.exceptions import UserError
 from datetime import datetime, timedelta, date
 import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
-from openerp import SUPERUSER_ID
+from odoo import SUPERUSER_ID
 
 import xml.dom.minidom
 import pytz
@@ -18,9 +18,9 @@ import socket
 import collections
 
 try:
-    from cStringIO import StringIO
+    from io import BytesIO
 except:
-    from StringIO import StringIO
+    _logger.warning("no se ha cargado io")
 
 import traceback as tb
 import suds.metrics as metrics
@@ -68,11 +68,6 @@ except ImportError:
     _logger.info('Cannot import pdf417gen library')
 
 try:
-    import M2Crypto
-except ImportError:
-    _logger.info('Cannot import M2Crypto library')
-
-try:
     import base64
 except ImportError:
     _logger.info('Cannot import base64 library')
@@ -88,14 +83,18 @@ except ImportError:
     _logger.info('Cannot import cchardet library')
 
 try:
-    from SOAPpy import SOAPProxy
-except ImportError:
-    _logger.info('Cannot import SOOAPpy')
-
-try:
     from signxml import xmldsig, methods
 except ImportError:
     _logger.info('Cannot import signxml')
+
+try:
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    import OpenSSL
+    from OpenSSL import crypto
+    type_ = crypto.FILETYPE_PEM
+except:
+    _logger.warning('Cannot import OpenSSL library')
 
 # timbre patrón. Permite parsear y formar el
 # ordered-dict patrón corespondiente al documento
@@ -214,7 +213,7 @@ class stock_picking(models.Model):
             pass
         url = server_url[company_id.dte_service_provider] + 'CrSeed.jws?WSDL'
         ns = 'urn:'+server_url[company_id.dte_service_provider] + 'CrSeed.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         root = etree.fromstring(_server.getSeed())
         semilla = root[0][0].text
         return semilla
@@ -307,7 +306,7 @@ version="1.0">
     def get_token(self, seed_file,company_id):
         url = server_url[company_id.dte_service_provider] + 'GetTokenFromSeed.jws?WSDL'
         ns = 'urn:'+ server_url[company_id.dte_service_provider] +'GetTokenFromSeed.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         tree = etree.fromstring(seed_file)
         ss = etree.tostring(tree, pretty_print=True, encoding='iso-8859-1')
         respuesta = etree.fromstring(_server.getToken(ss))
@@ -376,11 +375,6 @@ version="1.0">
         sig_root = Element("Signature",attrib={'xmlns':'http://www.w3.org/2000/09/xmldsig#'})
         sig_root.append(etree.fromstring(signed_info_c14n))
         signature_value = SubElement(sig_root, "SignatureValue")
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
-        import OpenSSL
-        from OpenSSL.crypto import *
-        type_ = FILETYPE_PEM
         key=OpenSSL.crypto.load_privatekey(type_,privkey.encode('ascii'))
         signature= OpenSSL.crypto.sign(key,signed_info_c14n,'sha1')
         signature_value.text =textwrap.fill(base64.b64encode(signature),64)
@@ -1139,7 +1133,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
     def _get_send_status(self, track_id, signature_d,token):
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         rut = self.format_vat(self.company_id.vat, True)
         respuesta = _server.getEstUp(rut[:8], str(rut[-1]),track_id,token)
         self.sii_receipt = respuesta
@@ -1160,7 +1154,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         partner_id = self.partner_id or self.company_id.partner_id
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         receptor = self.format_vat(partner_id.commercial_partner_id.vat, True)
         min_date = datetime.strptime(self.min_date[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
         total = str(int(round(self.amount_total,0)))

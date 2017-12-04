@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from openerp import fields, models, api, _
-from openerp.exceptions import UserError
+from odoo import fields, models, api, _
+from odoo.exceptions import UserError
 from datetime import datetime, timedelta
 import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
-from openerp import SUPERUSER_ID
+from odoo import SUPERUSER_ID
 
 import xml.dom.minidom
 import pytz
@@ -18,44 +18,25 @@ import socket
 import collections
 
 try:
-    from cStringIO import StringIO
+    from io import BytesIO
 except:
-    from StringIO import StringIO
+    _logger.warning("no se ha cargado io")
 
-# ejemplo de suds
 import traceback as tb
 import suds.metrics as metrics
-#from tests import *
-#from suds import WebFault
-#from suds.client import Client
-# from suds.sax.text import Raw
-# import suds.client as sudscl
 
 try:
     from suds.client import Client
 except:
     pass
-# from suds.transport.https import WindowsHttpAuthenticated
-# from suds.cache import ObjectCache
 
-# ejemplo de suds
-
-# intento con urllib3
 try:
     import urllib3
 except:
     pass
 
-# from urllib3 import HTTPConnectionPool
-#urllib3.disable_warnings()
 pool = urllib3.PoolManager()
-# ca_certs = "/etc/ssl/certs/ca-certificates.crt"
-# pool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=ca_certs)
 import textwrap
-
-# from inspect import currentframe, getframeinfo
-# estas 2 lineas son para imprimir el numero de linea del script
-# (solo para debug)
 
 _logger = logging.getLogger(__name__)
 
@@ -69,11 +50,6 @@ try:
     dicttoxml.set_debug(False)
 except ImportError:
     _logger.info('Cannot import dicttoxml library')
-
-try:
-    import M2Crypto
-except ImportError:
-    _logger.info('Cannot import M2Crypto library')
 
 try:
     import base64
@@ -91,7 +67,7 @@ except ImportError:
     _logger.info('Cannot import cchardet library')
 
 try:
-    from SOAPpy import SOAPProxy
+    from SOAPpy import Client
 except ImportError:
     _logger.info('Cannot import SOOAPpy')
 
@@ -99,6 +75,15 @@ try:
     from signxml import xmldsig, methods
 except ImportError:
     _logger.info('Cannot import signxml')
+
+try:
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    import OpenSSL
+    from OpenSSL import crypto
+    type_ = crypto.FILETYPE_PEM
+except:
+    _logger.warning('Cannot import OpenSSL library')
 
 server_url = {'SIIHOMO':'https://maullin.sii.cl/DTEWS/','SII':'https://palena.sii.cl/DTEWS/'}
 
@@ -220,7 +205,7 @@ class LibroGuia(models.Model):
             pass
         url = server_url[company_id.dte_service_provider] + 'CrSeed.jws?WSDL'
         ns = 'urn:'+server_url[company_id.dte_service_provider] + 'CrSeed.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         root = etree.fromstring(_server.getSeed())
         semilla = root[0][0].text
         return semilla
@@ -288,7 +273,7 @@ version="1.0">
     def get_token(self, seed_file,company_id):
         url = server_url[company_id.dte_service_provider] + 'GetTokenFromSeed.jws?WSDL'
         ns = 'urn:'+ server_url[company_id.dte_service_provider] +'GetTokenFromSeed.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         tree = etree.fromstring(seed_file)
         ss = etree.tostring(tree, pretty_print=True, encoding='iso-8859-1')
         respuesta = etree.fromstring(_server.getToken(ss))
@@ -355,11 +340,6 @@ version="1.0">
         sig_root = Element("Signature",attrib={'xmlns':xmlns})
         sig_root.append(etree.fromstring(signed_info_c14n))
         signature_value = SubElement(sig_root, "SignatureValue")
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
-        import OpenSSL
-        from OpenSSL.crypto import *
-        type_ = FILETYPE_PEM
         key=OpenSSL.crypto.load_privatekey(type_,privkey.encode('ascii'))
         signature= OpenSSL.crypto.sign(key,signed_info_c14n,'sha1')
         signature_value.text =textwrap.fill(base64.b64encode(signature),64)
@@ -794,7 +774,7 @@ exponent. AND DIGEST""")
     def _get_send_status(self, track_id, signature_d,token):
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         rut = self.format_vat(self.company_id.vat)
         respuesta = _server.getEstUp(rut[:8], str(rut[-1]),track_id,token)
         self.sii_message = respuesta
@@ -814,7 +794,7 @@ exponent. AND DIGEST""")
     def _get_dte_status(self, signature_d, token):
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws?WSDL'
         ns = 'urn:'+ server_url[self.company_id.dte_service_provider] + 'QueryEstDte.jws'
-        _server = SOAPProxy(url, ns)
+        _server = Client(url, ns)
         receptor = self.format_vat(self.partner_id.vat or self.company_id.partner_id.vat)
         date_invoice = datetime.strptime(self.date_invoice, "%Y-%m-%d").strftime("%d-%m-%Y")
         respuesta = _server.getEstDte(signature_d['subject_serial_number'][:8], str(signature_d['subject_serial_number'][-1]),

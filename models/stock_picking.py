@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from datetime import date, datetime
-from openerp import osv, models, fields, api, _, SUPERUSER_ID
-from openerp.osv import fields as old_fields
-from openerp.exceptions import except_orm, UserError
-import openerp.addons.decimal_precision as dp
-from openerp.tools.float_utils import float_compare, float_round
-from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT, DEFAULT_SERVER_DATE_FORMAT
+from odoo import osv, models, fields, api, _, SUPERUSER_ID
+from odoo.exceptions import except_orm, UserError
+import odoo.addons.decimal_precision as dp
+from odoo.tools.float_utils import float_compare, float_round
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT, DEFAULT_SERVER_DATE_FORMAT
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -409,8 +408,8 @@ class StockPackOperation(models.Model):
                     rec.discount = l.discount
                     rec.operation_line_tax_ids = l.move_line_tax_ids
             if not rec.price_unit > 0 or not rec.name:
-            	if not rec.name:
-            		rec.name = rec.product_id.name
+                if not rec.name:
+                    rec.name = rec.product_id.name
                 rec.price_unit = rec.product_id.lst_price
                 rec.operation_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
 
