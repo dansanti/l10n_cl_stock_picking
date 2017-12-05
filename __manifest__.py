@@ -18,7 +18,7 @@
     'init_xml': [],
     'installable': True,
     'license': 'AGPL-3',
-    'name': u'Chile - Sistema de apoyo a la guías de despacho',
+    'name': u'Guías de Despacho Electrónica para Chile',
     'test': [],
     'data': [
         'security/ir.model.access.csv',
@@ -29,5 +29,5 @@
         "views/account_invoice.xml",
         'wizard/masive_send_dte.xml',
     ],
-    'version': '11.0.6.0',
+    'version': '11.0.7.0',
 }

@@ -722,8 +722,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         return cadena
 
     @api.multi
-    def do_transfer(self):
-        super(stock_picking,self).do_transfer()
+    def action_done(self):
+        res = super(stock_picking, self).action_done()
         for s in self:
             if not s.use_documents:
                 continue
@@ -742,6 +742,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
                                             'tipo_trabajo': 'pasivo',
                                             'date_time': (datetime.now() + timedelta(hours=12)),
                                             })
+        return res
 
 
     @api.multi

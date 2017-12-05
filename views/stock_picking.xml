@@ -31,16 +31,16 @@
                   <field name="use_documents"/>
                 </field>
 
-                <xpath expr="//page/field[@name='pack_operation_product_ids']/tree/field[@name='qty_done']" position="after">
+                <xpath expr="//sheet/notebook/page/field[@name='move_lines']/tree/field[@name='product_uom']" position="after">
                   <field name="name"/>
                   <field name="price_unit"/>
                   <field name="price_untaxed" invisible="True" />
-                  <field name="operation_line_tax_ids" widget="many2many_tags"  domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
+                  <field name="move_line_tax_ids" widget="many2many_tags"  domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
                   <field name="discount" />
                   <field name="subtotal"/>
                   <field name="currency_id" invisible="1"/>
                 </xpath>
-                <field name="pack_operation_ids" position="after">
+                <field name="move_lines" position="after">
                   <group attres="{'invisible':{[('mover_reason','not in',['2','3','8','9'])]}}">
                     <field name="amount_untaxed"/>
                     <field name="amount_tax"/>
@@ -96,7 +96,7 @@
             <field name="arch" type="xml">
               <field name="product_uom" position="after">
                 <field name="name"/>
-                <field name="price_unit_sales"/>
+                <field name="price_unit"/>
                 <field name="move_line_tax_ids" widget="many2many_tags"  domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
                 <field name="discount" />
                 <field name="subtotal"/>
@@ -113,7 +113,7 @@
                 <xpath expr="//group/group[last()]" position="before">
                     <group>
                       <field name="name"/>
-                        <field name="price_unit_sales"/>
+                        <field name="price_unit"/>
                         <field name="move_line_tax_ids" widget="many2many_tags" domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
                         <field name="discount"/>
                         <field name="currency_id" invisible="1"/>
@@ -146,7 +146,7 @@
             <field name="model">stock.quant</field>
             <field name="inherit_id" ref="stock.view_stock_quant_form"/>
             <field name="arch" type="xml">
-                <field name="qty" position="after">
+                <field name="quantity" position="after">
                     <field name="description"/>
                     <field name="price_unit"/>
                     <field name="currency_id"/>
@@ -159,7 +159,7 @@
             <field name="model">stock.quant</field>
             <field name="inherit_id" ref="stock.view_stock_quant_tree"/>
             <field name="arch" type="xml">
-                <field name="qty" position="after">
+                <field name="quantity" position="after">
                     <field name="description"/>
                     <field name="price_unit"/>
                     <field name="currency_id"/>
