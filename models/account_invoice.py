@@ -5,7 +5,10 @@ from odoo import fields, models, api, _
 class PickingToInvoiceD(models.Model):
     _inherit = 'account.invoice'
 
+    @api.depends('partner_id')
     def _get_pending_pickings(self ):
+        if not self.partner_id:
+            return
         for inv in self:
             if inv.type in ['out_invoice']:
                 pickings = self.env['stock.picking'].search_count(
@@ -20,11 +23,12 @@ class PickingToInvoiceD(models.Model):
     has_pending_pickings = fields.Integer(
         string="Pending Pickings",
         compute='_get_pending_pickings',
+        default=0,
     )
 
     @api.multi
     def invoice_validate(self):
-        result  = super(invoice,self).invoice_validate()
+        result  = super(PickingToInvoiceD, self).invoice_validate()
         for inv in self:
             sp = False
             if inv.move_id:

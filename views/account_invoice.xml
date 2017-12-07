@@ -8,7 +8,7 @@
     <field name="arch" type="xml">
       <div class="alert alert-info" position="after">
         <field name="has_pending_pickings" invisible="1"/>
-        <div class="alert alert-info" role="alert" style="margin-bottom:0px;" attrs="{'invisible': [('has_pending_pickings','=',False), ('sii_result', 'not in', ['', 'NoEnviado', 'Rechazado'])]}">
+        <div class="alert alert-info" role="alert" style="margin-bottom:0px;" attrs="{'invisible': ['|', ('has_pending_pickings','=',False), ('sii_result', 'not in', [False, '', 'NoEnviado', 'Rechazado'])]}">
             You have <bold><a class="alert-link" href="#" role="button">not invoiced pickings</a></bold> for this customer. You can allocate them to add as reference on Other Info.
         </div>
       </div>

@@ -53,8 +53,9 @@ class StockPicking(models.Model):
                         for t in move.move_line_tax_ids:
                             taxes.setdefault(t.id,[t, 0])
                             taxes[t.id][1] += move.subtotal
-            for t, value in taxes.iteritems():
-                amount_tax += value[0].compute_all(value[1], rec.currency_id, 1)['taxes'][0]['amount']
+            if taxes:
+                for t, value in taxes.iteritems():
+                    amount_tax += value[0].compute_all(value[1], rec.currency_id, 1)['taxes'][0]['amount']
             rec.amount_untaxed = amount_untaxed
             rec.amount_tax = amount_tax
             rec.amount_total = amount_untaxed + rec.amount_tax
@@ -183,9 +184,9 @@ class StockPicking(models.Model):
         self.chofer = self.vehicle.driver_id
         self.patente = self.vehicle.license_plate
 
-    @api.onchange('carrier_id')
-    def _setChoferFromCarrier(self):
-        self.chofer = self.carrier_id.partner_id
+    #@api.onchange('carrier_id')
+    #def _setChoferFromCarrier(self):
+        #self.chofer = self.carrier_id.partner_id
 
     #@api.onchange('pack_operation_product_ids')
     #def _setValues(self):

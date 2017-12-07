@@ -67,11 +67,6 @@ except ImportError:
     _logger.info('Cannot import cchardet library')
 
 try:
-    from SOAPpy import Client
-except ImportError:
-    _logger.info('Cannot import SOOAPpy')
-
-try:
     from signxml import xmldsig, methods
 except ImportError:
     _logger.info('Cannot import signxml')
@@ -593,23 +588,24 @@ exponent. AND DIGEST""")
         states={'draft': [('readonly', False)]})
     #total_afecto = fields.Char(string="Total Afecto")
     #total_exento = fields.Char(string="Total Exento")
-    periodo_tributario = fields.Char('Periodo Tributario',
-        required=True,
-        readonly=True,
-        states={'draft': [('readonly', False)]})
+    periodo_tributario = fields.Char(
+            string='Periodo Tributario',
+            required=True,
+            readonly=True,
+            states={'draft': [('readonly', False)]},
+            default=lambda *a: datetime.now().strftime('%Y-%m'),
+        )
     company_id = fields.Many2one('res.company',
         required=True,
         default=lambda self: self.env.user.company_id.id,
         readonly=True,
         states={'draft': [('readonly', False)]})
-    name = fields.Char(string="Detalle",
-        required=True,
-        readonly=True,
-        states={'draft': [('readonly', False)]})
-
-    _defaults = {
-        'periodo_tributario': datetime.now().strftime('%Y-%m'),
-    }
+    name = fields.Char(
+            string="Detalle",
+            required=True,
+            readonly=True,
+            states={'draft': [('readonly', False)]},
+        )
 
     @api.multi
     def validar_libro(self):
