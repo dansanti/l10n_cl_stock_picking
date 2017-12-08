@@ -24,7 +24,7 @@ class PickingToInvoiceD(models.Model):
 
     @api.multi
     def invoice_validate(self):
-        result  = super(invoice,self).invoice_validate()
+        result  = super(PickingToInvoiceD,self).invoice_validate()
         for inv in self:
             sp = False
             if inv.move_id:
