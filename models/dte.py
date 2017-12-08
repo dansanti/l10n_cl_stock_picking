@@ -111,7 +111,7 @@ afeqWjiRVMvV4+s4Q==</FRMA></CAF><TSTED>2014-04-24T12:02:20</TSTED></DD>\
 fHlAa7j08Xff95Yb2zg31sJt6lMjSKdOK+PQp25clZuECig==</FRMT></TED>"""
 result = xmltodict.parse(timbre)
 
-server_url = {'SIIHOMO':'https://maullin.sii.cl/DTEWS/','SII':'https://palena.sii.cl/DTEWS/'}
+server_url = {'SIICERT':'https://maullin.sii.cl/DTEWS/','SII':'https://palena.sii.cl/DTEWS/'}
 
 BC = '''-----BEGIN CERTIFICATE-----\n'''
 EC = '''\n-----END CERTIFICATE-----\n'''
@@ -473,7 +473,7 @@ version="1.0">
             _logger.info('error')
             return
         url = 'https://palena.sii.cl'
-        if company_id.dte_service_provider == 'SIIHOMO':
+        if company_id.dte_service_provider == 'SIICERT':
             url = 'https://maullin.sii.cl'
         post = '/cgi_dte/UPL/DTEUpload'
         headers = {
@@ -1001,7 +1001,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         count = 0
         lin_ref = 1
         ref_lines = []
-        if self.company_id.dte_service_provider == 'SIIHOMO' and isinstance(n_atencion, unicode):
+        if self.company_id.dte_service_provider == 'SIICERT' and isinstance(n_atencion, unicode):
             ref_line = {}
             ref_line = collections.OrderedDict()
             ref_line['NroLinRef'] = lin_ref
@@ -1089,7 +1089,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             signature.'''))
             certp = signature_d['cert'].replace(
                 BC, '').replace(EC, '').replace('\n', '')
-            if rec.company_id.dte_service_provider == 'SIIHOMO': # si ha sido timbrado offline, no se puede volver a timbrar
+            if rec.company_id.dte_service_provider == 'SIICERT': # si ha sido timbrado offline, no se puede volver a timbrar
                 rec._timbrar(n_atencion)
             DTEs.update( {rec.id: rec.sii_xml_request})
             if not company_id:
