@@ -76,7 +76,7 @@
                             <td style="border-top:0px !important;padding:4px !important;"><strong >Señor (es):</strong></td>
                             <td style="border-top:0px !important;padding:4px !important;min-width:500px;max-width:500px;"><span t-field="partner_id.commercial_partner_id.name"/></td>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Fecha:</strong></td>
-                            <td style="border-top:0px !important;padding:4px !important;"><t t-if="'min_date' in o and o.min_date"><span t-field="o.min_date"/></t></td>
+                            <td style="border-top:0px !important;padding:4px !important;"><t t-if="'scheduled_date' in o and o.scheduled_date"><span t-field="o.scheduled_date"/></t></td>
                           </tr>
                           <tr>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>RUT:</strong></td>
@@ -99,7 +99,7 @@
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Contacto:</strong></td>
                             <td style="border-top:0px !important;padding:4px !important;min-width:500px;max-width:500px;"><t t-if="'contact_id' in o and o.contact_id"><span t-field="o.contact_id.name"/></t></td>
                             <td style="border-top:0px !important;padding:4px !important;"><strong>Vencimiento:</strong></td>
-                            <td style="border-top:0px !important;padding:4px !important;"><span t-field="o.min_date"/></td>
+                            <td style="border-top:0px !important;padding:4px !important;"><span t-field="o.scheduled_date"/></td>
                           </tr>
                         </tbody>
                       </table>

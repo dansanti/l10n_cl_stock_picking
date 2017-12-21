@@ -29,5 +29,5 @@
         "views/account_invoice.xml",
         'wizard/masive_send_dte.xml',
     ],
-    'version': '11.0.7.2',
+    'version': '11.0.7.3',
 }
