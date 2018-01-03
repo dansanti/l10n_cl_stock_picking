@@ -38,19 +38,11 @@ class StockPicking(models.Model):
     def _compute_amount(self):
         for rec in self:
             if rec.move_reason not in ['5']:
-
                 taxes = {}
                 amount_untaxed = amount_tax = 0
-                #if rec.pack_operation_product_ids and rec.state not in ['draft']:
-                #    for operation in rec.pack_operation_product_ids:
-                #        amount_untaxed += operation.subtotal
-                #        if operation.operation_line_tax_ids:
-                #            for t in operation.operation_line_tax_ids:
-                #                taxes.setdefault(t.id,[t, 0])
-                #                taxes[t.id][1] += operation.subtotal
                 if rec.move_lines:
                     for move in rec.move_lines:
-                        rec.amount_untaxed += move.subtotal
+                        amount_untaxed += move.subtotal
                         if move.move_line_tax_ids:
                             for t in move.move_line_tax_ids:
                                 taxes.setdefault(t.id,[t, 0])
@@ -58,8 +50,8 @@ class StockPicking(models.Model):
                 if taxes:
                     for t, value in taxes.items():
                         amount_tax += value[0].compute_all(value[1], rec.currency_id, 1)['taxes'][0]['amount']
-                #rec.amount_untaxed = amount_untaxed
                 rec.amount_tax = amount_tax
+                rec.amount_untaxed = amount_untaxed
             rec.amount_total = rec.amount_untaxed + rec.amount_tax
 
     def set_use_document(self):
