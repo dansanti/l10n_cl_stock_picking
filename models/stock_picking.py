@@ -77,7 +77,7 @@ class StockPicking(models.Model):
             string='Currency',
             required=True,
             states={'draft': [('readonly', False)]},
-            default=lambda self: self.env.user.company_id.currency_id,
+            default=lambda self: self.env.user.company_id.currency_id.id,
             track_visibility='always',
         )
     sii_batch_number = fields.Integer(
@@ -253,20 +253,29 @@ class StockMove(models.Model):
                 vals['company_id'] = picking.company_id.id
         return super(StockMove,self).create(vals)
 
+    def _set_price_from(self):
+        if self.picking_id.reference:
+            for ref in self.picking_id.reference:
+                if ref.sii_referencia_TpoDocRef.sii_code in [ 33 ]:# factura venta
+                    il = self.env['account.invoice'].search(
+                            [
+                                    ('sii_document_number', '=', ref.origen),
+                                    ('sii_document_class_id.sii_code', '=', ref.sii_referencia_TpoDocRef.sii_code),
+                                    ('product_id','=', self.product_id.id),
+                            ]
+                        )
+                    if il:
+                        self.price_unit = il.price_unit
+                        self.subtotal = il.subtotal
+                        self.discount = il.discount
+                        self.move_line_tax_ids = il.invoice_line_tax_ids
+
     @api.depends('picking_id.reference')
     @api.onchange('name')
     def _sale_prices(self):
         for rec in self:
-            if rec.picking_id.reference:
-                for ref in rec.picking_id.reference:
-                    if ref.sii_referencia_TpoDocRef.sii_code in ['34','33']:# factura venta
-                        inv = self.env['account.invoice'].search([('sii_document_number','=',ref.origen)])
-                        for l in inv.invoice_lines:
-                            if l.product_id.id == rec.product_id.id:
-                                rec.price_unit = l.price_unit
-                                rec.subtotal = l.subtotal
-                                rec.discount = l.discount
-                                rec.move_line_tax_ids = l.invoice_line_tax_ids
+            if rec.price_unit <= 0:
+                rec._set_price_from()
             if rec.price_unit <= 0:
                 rec.price_unit = rec.product_id.lst_price
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
@@ -315,7 +324,7 @@ class StockMove(models.Model):
             required=True,
             readonly=True,
             states={'draft': [('readonly', False)]},
-            default=lambda self: self.env.user.company_id.currency_id,
+            default=lambda self: self.env.user.company_id.currency_id.id,
             track_visibility='always',
         )
 
