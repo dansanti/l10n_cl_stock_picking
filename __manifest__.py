@@ -8,7 +8,7 @@
         'stock',
         'fleet',
         'delivery',
-        'stock_sale',
+        'sale_stock',
         'l10n_cl_fe',
         ],
     'description': u'''
