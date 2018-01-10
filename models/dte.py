@@ -516,7 +516,7 @@ version="1.0">
         Emisor['RUTEmisor'] = self.format_vat(self.company_id.vat)
         Emisor['RznSoc'] = self.company_id.partner_id.name
         Emisor['GiroEmis'] = self._acortar_str(self.company_id.activity_description.name, 80)
-        Emisor['Telefono'] = self.company_id.phone or ''
+        Emisor['Telefono'] = self._acortar_str(self.company_id.phone or '', 20)
         Emisor['CorreoEmisor'] = self.company_id.dte_email
         Emisor['item'] = self._giros_emisor()
         if self.location_id.sii_code:
@@ -693,8 +693,8 @@ version="1.0">
                 no_product = True
             if not no_product:
                 lines['UnmdItem'] = line.product_uom.name[:4]
-                if line.price_unit > 0:
-                    lines['PrcItem'] = round(line.price_unit, 4)
+                if line.precio_unitario > 0:
+                    lines['PrcItem'] = round(line.precio_unitario, 4)
             if line.discount > 0:
                 lines['DescuentoPct'] = line.discount
                 lines['DescuentoMonto'] = int(round((((line.discount / 100) * lines['PrcItem'])* qty)))

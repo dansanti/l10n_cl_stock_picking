@@ -13,7 +13,7 @@ class SOL(models.Model):
         result = super(SOL, self)._prepare_procurement_values(group_id)
         self.ensure_one()
         result.update({
-                'price_unit': self.price_unit,
+                'precio_unitario': self.price_unit,
                 'discount': self.discount,
                 'move_line_tax_ids': self.tax_id.ids,
                 'currency_id': self.currency_id.id,

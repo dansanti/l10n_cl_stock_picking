@@ -13,7 +13,7 @@ class POL(models.Model):
         result = super(POL, self)._prepare_stock_moves(picking)
         self.ensure_one()
         result[0].update({
-                'price_unit': self.price_unit,
+                'precio_unitario': self.price_unit,
                 #'discount': self.discount,
                 'move_line_tax_ids': self.taxes_id.ids,
                 'currency_id': self.currency_id.id,

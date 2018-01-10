@@ -39,7 +39,8 @@ class StockPicking(models.Model):
         for rec in self:
             if rec.move_reason not in ['5']:
                 taxes = {}
-                amount_untaxed = amount_tax = 0
+                amount_untaxed = 0
+                amount_tax = 0
                 if rec.move_lines:
                     for move in rec.move_lines:
                         amount_untaxed += move.subtotal
@@ -265,7 +266,7 @@ class StockMove(models.Model):
                             ]
                         )
                     if il:
-                        self.price_unit = il.price_unit
+                        self.precio_unitario = il.price_unit
                         self.subtotal = il.subtotal
                         self.discount = il.discount
                         self.move_line_tax_ids = il.invoice_line_tax_ids
@@ -274,18 +275,18 @@ class StockMove(models.Model):
     @api.onchange('name')
     def _sale_prices(self):
         for rec in self:
-            if rec.price_unit <= 0:
+            if rec.precio_unitario <= 0:
                 rec._set_price_from()
-            if rec.price_unit <= 0:
-                rec.price_unit = rec.product_id.lst_price
+            if rec.precio_unitario <= 0:
+                rec.precio_unitario = rec.product_id.lst_price
                 rec.move_line_tax_ids = rec.product_id.taxes_id # @TODO mejorar asignación
             if not rec.name:
                 rec.name = rec.product_id.name
 
-    @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty', 'price_unit', 'quantity_done')
+    @api.onchange('name','product_id','move_line_tax_ids','product_uom_qty', 'precio_unitario', 'quantity_done')
     def _compute_amount(self):
         for rec in self:
-            price = rec.price_unit * (1 - (rec.discount or 0.0) / 100.0)
+            price = rec.precio_unitario * (1 - (rec.discount or 0.0) / 100.0)
             qty = rec.quantity_done
             if qty <= 0:
                 qty = rec.product_uom_qty
@@ -298,8 +299,8 @@ class StockMove(models.Model):
             compute='_compute_amount',
             string='Subtotal',
         )
-    price_unit = fields.Monetary(
-            string='Price',
+    precio_unitario = fields.Monetary(
+            string='Precio Unitario',
         )
     price_untaxed = fields.Monetary(
             compute='_sale_prices',

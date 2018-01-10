@@ -159,7 +159,7 @@
                                  </td>
                                  <td><span t-field="l.product_id.name"/> <t t-if="l.product_id.name != l.name"><span t-field="l.name"/></t></td>
                                  <td class="text-right">
-                                     <span t-field="l.price_unit" t-field-options='{"widget": "monetary", "display_currency": "o.currency_id"}'/>
+                                     <span t-field="l.precio_unitario" t-field-options='{"widget": "monetary", "display_currency": "o.currency_id"}'/>
                                  </td>
                                  <td t-if="display_discount" class="text-right" groups="sale.group_discount_per_so_line">
                                      <span t-field="l.discount"/>
