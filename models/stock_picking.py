@@ -60,17 +60,17 @@ class StockPicking(models.Model):
 
     amount_untaxed = fields.Monetary(
             compute='_compute_amount',
-            digits_compute=dp.get_precision('Account'),
+            digits=dp.get_precision('Account'),
             string='Untaxed Amount',
         )
     amount_tax = fields.Monetary(
             compute='_compute_amount',
-            digits_compute=dp.get_precision('Account'),
+            digits=dp.get_precision('Account'),
             string='Taxes',
         )
     amount_total = fields.Monetary(
             compute='_compute_amount',
-            digits_compute=dp.get_precision('Account'),
+            digits=dp.get_precision('Account'),
             string='Total',
         )
     currency_id = fields.Many2one(
@@ -316,7 +316,7 @@ class StockMove(models.Model):
             oldname='invoice_line_tax_id',
         )
     discount = fields.Monetary(
-            digits_compute=dp.get_precision('Discount'),
+            digits=dp.get_precision('Discount'),
             string='Discount (%)',
         )
     currency_id = fields.Many2one(
