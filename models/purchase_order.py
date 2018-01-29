@@ -12,10 +12,11 @@ class POL(models.Model):
     def _prepare_stock_moves(self, picking):
         result = super(POL, self)._prepare_stock_moves(picking)
         self.ensure_one()
-        result[0].update({
+        for vals in result:
+            vals.update({
                 'precio_unitario': self.price_unit,
                 #'discount': self.discount,
-                'move_line_tax_ids': self.taxes_id.ids,
+                'move_line_tax_ids': [(6, 0, self.taxes_id.ids)],
                 'currency_id': self.currency_id.id,
             })
         return result
