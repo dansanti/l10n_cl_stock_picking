@@ -209,7 +209,7 @@ class StockLocation(models.Model):
     sii_document_class_id = fields.Many2one(
             'sii.document_class',
             string='Document Type',
-            required=True,
+            required=False,
         )
     sequence_id = fields.Many2one(
             'ir.sequence',
