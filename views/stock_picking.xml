@@ -136,7 +136,7 @@
                 <field name="usage" position="after">
                     <field name="sii_code"/>
                     <field name="sequence_id"/>
-                    <field name="sii_document_class_id" />
+                    <field name="sii_document_class_id" attrs="{'required': [('usage','=','internal')]}"/>
                 </field>
             </field>
         </record>
