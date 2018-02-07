@@ -10,22 +10,17 @@ from lxml import objectify
 from lxml.etree import XMLSyntaxError
 from odoo import SUPERUSER_ID
 
-import xml.dom.minidom
 import pytz
 from six import string_types
-import struct
 
-
-import socket
 import collections
+
+_logger = logging.getLogger(__name__)
 
 try:
     from io import BytesIO
 except:
     _logger.warning("no se ha cargado io")
-
-import traceback as tb
-import suds.metrics as metrics
 
 try:
     from suds.client import Client
@@ -48,13 +43,6 @@ except:
     pass
 
 try:
-    import textwrap
-except:
-    pass
-
-_logger = logging.getLogger(__name__)
-
-try:
     import xmltodict
 except ImportError:
     _logger.info('Cannot import xmltodict library')
@@ -73,21 +61,6 @@ try:
     import base64
 except ImportError:
     _logger.info('Cannot import base64 library')
-
-try:
-    import hashlib
-except ImportError:
-    _logger.info('Cannot import hashlib library')
-
-try:
-    import cchardet
-except ImportError:
-    _logger.info('Cannot import cchardet library')
-
-try:
-    from signxml import xmldsig, methods
-except ImportError:
-    _logger.info('Cannot import signxml')
 
 try:
     from cryptography.hazmat.backends import default_backend
