@@ -614,9 +614,11 @@ exponent. AND DIGEST""")
     #total_afecto = fields.Char(string="Total Afecto")
     #total_exento = fields.Char(string="Total Exento")
     periodo_tributario = fields.Char('Periodo Tributario',
-        required=True,
-        readonly=True,
-        states={'draft': [('readonly', False)]})
+            required=True,
+            readonly=True,
+            states={'draft': [('readonly', False)]},
+            default=lambda *a: datetime.now().strftime('%Y-%m'),
+        )
     company_id = fields.Many2one('res.company',
         required=True,
         default=lambda self: self.env.user.company_id.id,
@@ -626,10 +628,6 @@ exponent. AND DIGEST""")
         required=True,
         readonly=True,
         states={'draft': [('readonly', False)]})
-
-    _defaults = {
-        'periodo_tributario': datetime.now().strftime('%Y-%m'),
-    }
 
     @api.multi
     def validar_libro(self):
