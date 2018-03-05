@@ -93,11 +93,6 @@ class StockPicking(models.Model):
         store=True,
         invisible=True,
         readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
-    partner_turn = fields.Many2one(
-        'partner.activities',
-        'Giro',
-        store=True,
-        readonly=True, states={'assigned':[('readonly',False)],'draft':[('readonly',False)]})
     activity_description = fields.Many2one(
         'sii.activity.description',
         'Giro',
