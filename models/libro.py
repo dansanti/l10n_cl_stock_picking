@@ -16,6 +16,7 @@ import pytz
 
 import socket
 import collections
+_logger = logging.getLogger(__name__)
 
 try:
     from cStringIO import StringIO
@@ -25,39 +26,21 @@ except:
 # ejemplo de suds
 import traceback as tb
 import suds.metrics as metrics
-#from tests import *
-#from suds import WebFault
-#from suds.client import Client
-# from suds.sax.text import Raw
-# import suds.client as sudscl
 
 try:
     from suds.client import Client
 except:
     pass
-# from suds.transport.https import WindowsHttpAuthenticated
-# from suds.cache import ObjectCache
 
-# ejemplo de suds
-
-# intento con urllib3
 try:
     import urllib3
 except:
     pass
 
-# from urllib3 import HTTPConnectionPool
-#urllib3.disable_warnings()
+
 pool = urllib3.PoolManager()
-# ca_certs = "/etc/ssl/certs/ca-certificates.crt"
-# pool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=ca_certs)
+
 import textwrap
-
-# from inspect import currentframe, getframeinfo
-# estas 2 lineas son para imprimir el numero de linea del script
-# (solo para debug)
-
-_logger = logging.getLogger(__name__)
 
 try:
     import xmltodict
@@ -71,9 +54,13 @@ except ImportError:
     _logger.info('Cannot import dicttoxml library')
 
 try:
-    import M2Crypto
-except ImportError:
-    _logger.info('Cannot import M2Crypto library')
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+    import OpenSSL
+    from OpenSSL import crypto
+    type_ = crypto.FILETYPE_PEM
+except:
+    _logger.warning('Cannot import OpenSSL library')
 
 try:
     import base64
@@ -355,13 +342,8 @@ version="1.0">
         sig_root = Element("Signature",attrib={'xmlns':xmlns})
         sig_root.append(etree.fromstring(signed_info_c14n))
         signature_value = SubElement(sig_root, "SignatureValue")
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
-        import OpenSSL
-        from OpenSSL.crypto import *
-        type_ = FILETYPE_PEM
-        key=OpenSSL.crypto.load_privatekey(type_,privkey.encode('ascii'))
-        signature= OpenSSL.crypto.sign(key,signed_info_c14n,'sha1')
+        key = crypto.load_privatekey(type_,privkey.encode('ascii'))
+        signature = crypto.sign(key,signed_info_c14n,'sha1')
         signature_value.text =textwrap.fill(base64.b64encode(signature),64)
         key_info = SubElement(sig_root, "KeyInfo")
         key_value = SubElement(key_info, "KeyValue")
@@ -525,33 +507,6 @@ version="1.0">
     def digest(self, data):
         sha1 = hashlib.new('sha1', data)
         return sha1.digest()
-
-    '''
-    Funcion usada en SII
-    para firma del timbre (dio errores de firma para el resto de los doc)
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2015-03-01
-    '''
-    def signrsa(self, MESSAGE, KEY, digst=''):
-        KEY = KEY.encode('ascii')
-        rsa = M2Crypto.EVP.load_key_string(KEY)
-        rsa.reset_context(md='sha1')
-        rsa_m = rsa.get_rsa()
-        rsa.sign_init()
-        rsa.sign_update(MESSAGE)
-        FRMT = base64.b64encode(rsa.sign_final())
-        if digst == '':
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64eDigesncode(rsa_m.e)}
-        else:
-            _logger.info("""Signature verified! Returning signature, modulus, \
-exponent. AND DIGEST""")
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64encode(rsa_m.e),
-                'digest': base64.b64encode(self.digest(MESSAGE))}
-
 
     @api.onchange('periodo_tributario','tipo_operacion')
     def _setName(self):

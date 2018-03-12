@@ -65,13 +65,13 @@ class StockPicking(models.Model):
         return (self.picking_type_id and self.picking_type_id.code != 'incoming')
 
     amount_untaxed = fields.Monetary(compute='_compute_amount',
-        digits_compute=dp.get_precision('Account'),
+        digits=dp.get_precision('Account'),
         string='Untaxed Amount')
     amount_tax = fields.Monetary(compute='_compute_amount',
-        digits_compute=dp.get_precision('Account'),
+        digits=dp.get_precision('Account'),
         string='Taxes')
     amount_total = fields.Monetary(compute='_compute_amount',
-        digits_compute=dp.get_precision('Account'),
+        digits=dp.get_precision('Account'),
         string='Total')
     currency_id = fields.Many2one(
         'res.currency',
@@ -377,14 +377,14 @@ class StockPackOperation(models.Model):
     name = fields.Char(string="Nombre")
     subtotal = fields.Monetary(
         compute='_compute_amount',
-        digits_compute=dp.get_precision('Account'),
+        digits=dp.get_precision('Account'),
         string='Subtotal')
     price_unit = fields.Monetary(
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         string='Price',
     )
     price_untaxed = fields.Monetary(
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         string='Price Untaxed',
     )
     operation_line_tax_ids = fields.Many2many(
@@ -402,7 +402,7 @@ class StockPackOperation(models.Model):
         oldname='invoice_line_tax_id'
     )
     discount = fields.Monetary(
-        digits_compute=dp.get_precision('Discount'),
+        digits=dp.get_precision('Discount'),
         string='Discount (%)',
     )
     currency_id = fields.Many2one(
@@ -459,16 +459,16 @@ class StockMove(models.Model):
     name = fields.Char(string="Nombre")
 
     subtotal = fields.Monetary(
-        compute='_compute_amount', digits_compute=dp.get_precision('Product Price'),
+        compute='_compute_amount', digits=dp.get_precision('Product Price'),
         string='Subtotal')
 
     price_unit_sales = fields.Monetary(
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         string='Price',
     )
     price_untaxed = fields.Monetary(
         compute='_sale_prices',
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         string='Price Untaxed',
     )
     move_line_tax_ids = fields.Many2many(
@@ -481,7 +481,7 @@ class StockMove(models.Model):
         oldname='invoice_line_tax_id',
     )
     discount = fields.Monetary(
-        digits_compute=dp.get_precision('Discount'),
+        digits=dp.get_precision('Discount'),
         string='Discount (%)',
     )
     currency_id = fields.Many2one('res.currency', string='Currency',
@@ -499,7 +499,7 @@ class MQ(models.Model):
         string="Description",
     )
     price_unit = fields.Monetary(
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         string='Price',
     )
     currency_id = fields.Many2one('res.currency',
