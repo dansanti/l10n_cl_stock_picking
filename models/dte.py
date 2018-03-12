@@ -68,11 +68,6 @@ except ImportError:
     _logger.info('Cannot import pdf417gen library')
 
 try:
-    import M2Crypto
-except ImportError:
-    _logger.info('Cannot import M2Crypto library')
-
-try:
     import base64
 except ImportError:
     _logger.info('Cannot import base64 library')
@@ -351,65 +346,6 @@ version="1.0">
             s = (blocksize - len(s) % blocksize) * b'\000' + s
         return s
 
-    def sign_full_xml(self, message, privkey, cert, uri, type='doc'):
-        doc = etree.fromstring(message)
-        string = etree.tostring(doc[0])
-        mess = etree.tostring(etree.fromstring(string), method="c14n")
-        digest = base64.b64encode(self.digest(mess))
-        reference_uri='#'+uri
-        signed_info = Element("SignedInfo")
-        c14n_method = SubElement(signed_info, "CanonicalizationMethod", Algorithm='http://www.w3.org/TR/2001/REC-xml-c14n-20010315')
-        sign_method = SubElement(signed_info, "SignatureMethod", Algorithm='http://www.w3.org/2000/09/xmldsig#rsa-sha1')
-        reference = SubElement(signed_info, "Reference", URI=reference_uri)
-        transforms = SubElement(reference, "Transforms")
-        SubElement(transforms, "Transform", Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
-        digest_method = SubElement(reference, "DigestMethod", Algorithm="http://www.w3.org/2000/09/xmldsig#sha1")
-        digest_value = SubElement(reference, "DigestValue")
-        digest_value.text = digest
-        signed_info_c14n = etree.tostring(signed_info,method="c14n",exclusive=False,with_comments=False,inclusive_ns_prefixes=None)
-        if type == 'doc':
-            att = 'xmlns="http://www.w3.org/2000/09/xmldsig#"'
-        else:
-            att = 'xmlns="http://www.w3.org/2000/09/xmldsig#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-        #@TODO Find better way to add xmlns:xsi attrib
-        signed_info_c14n = signed_info_c14n.replace("<SignedInfo>","<SignedInfo " + att + ">")
-        sig_root = Element("Signature",attrib={'xmlns':'http://www.w3.org/2000/09/xmldsig#'})
-        sig_root.append(etree.fromstring(signed_info_c14n))
-        signature_value = SubElement(sig_root, "SignatureValue")
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
-        import OpenSSL
-        from OpenSSL.crypto import *
-        type_ = FILETYPE_PEM
-        key=OpenSSL.crypto.load_privatekey(type_,privkey.encode('ascii'))
-        signature= OpenSSL.crypto.sign(key,signed_info_c14n,'sha1')
-        signature_value.text =textwrap.fill(base64.b64encode(signature),64)
-        key_info = SubElement(sig_root, "KeyInfo")
-        key_value = SubElement(key_info, "KeyValue")
-        rsa_key_value = SubElement(key_value, "RSAKeyValue")
-        modulus = SubElement(rsa_key_value, "Modulus")
-        key = load_pem_private_key(privkey.encode('ascii'),password=None, backend=default_backend())
-        modulus.text =  textwrap.fill(base64.b64encode(self.long_to_bytes(key.public_key().public_numbers().n)),64)
-        exponent = SubElement(rsa_key_value, "Exponent")
-        exponent.text = self.ensure_str(base64.b64encode(self.long_to_bytes(key.public_key().public_numbers().e)))
-        x509_data = SubElement(key_info, "X509Data")
-        x509_certificate = SubElement(x509_data, "X509Certificate")
-        x509_certificate.text = '\n'+textwrap.fill(cert,64)
-        msg = etree.tostring(sig_root)
-        msg = msg if self.xml_validator(msg, 'sig') else ''
-        if type=='doc':
-            fulldoc = self.create_template_doc1(message, msg)
-        if type=='env':
-            fulldoc = self.create_template_env1(message,msg)
-        if type=='recep':
-            fulldoc = self.append_sign_recep(message,msg)
-        if type=='env_recep':
-            fulldoc = self.append_sign_env_recep(message,msg)
-        if type=='env_resp':
-            fulldoc = self.append_sign_env_resp(message,msg)
-        fulldoc = fulldoc if self.xml_validator(fulldoc, type) else ''
-        return fulldoc
-
     def get_digital_signature_pem(self, comp_id):
         obj = user = self[0].responsable_envio
         if not obj:
@@ -604,52 +540,8 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         sha1 = hashlib.new('sha1', data)
         return sha1.digest()
 
-    '''
-    Funcion usada en SII
-    para firma del timbre (dio errores de firma para el resto de los doc)
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2015-03-01
-    '''
-    def signrsa(self, MESSAGE, KEY, digst=''):
-        KEY = KEY.encode('ascii')
-        rsa = M2Crypto.EVP.load_key_string(KEY)
-        rsa.reset_context(md='sha1')
-        rsa_m = rsa.get_rsa()
-        rsa.sign_init()
-        rsa.sign_update(MESSAGE)
-        FRMT = base64.b64encode(rsa.sign_final())
-        if digst == '':
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64eDigesncode(rsa_m.e)}
-        else:
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64encode(rsa_m.e),
-                'digest': base64.b64encode(self.digest(MESSAGE))}
-
-    '''
-    Funcion usada en SII
-    para firma del timbre (dio errores de firma para el resto de los doc)
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2015-03-01
-    '''
-    def signmessage(self, MESSAGE, KEY, pubk='', digst=''):
-        rsa = M2Crypto.EVP.load_key_string(KEY)
-        rsa.reset_context(md='sha1')
-        rsa_m = rsa.get_rsa()
-        rsa.sign_init()
-        rsa.sign_update(MESSAGE)
-        FRMT = base64.b64encode(rsa.sign_final())
-        if digst == '':
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64encode(rsa_m.e)}
-        else:
-            return {
-                'firma': FRMT, 'modulus': base64.b64encode(rsa_m.n),
-                'exponent': base64.b64encode(rsa_m.e),
-                'digest': base64.b64encode(self.digest(MESSAGE))}
+    def signmessage(self, texto, key):
+        return self.env['account.invoice'].signmessage(texto, key)
 
     '''
     Definicion de extension de modelo de datos para stock_picking
@@ -929,7 +821,7 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         if date( int(timestamp[:4]), int(timestamp[5:7]), int(timestamp[8:10])) < date(int(self.min_date[:4]), int(self.min_date[5:7]), int(self.min_date[8:10])):
             raise UserError("La fecha de timbraje no puede ser menor a la fecha de emisión del documento")
         ddxml = ddxml.replace('2014-04-24T12:02:20', timestamp)
-        frmt = self.signmessage(ddxml, keypriv, keypub)['firma']
+        frmt = self.signmessage(ddxml, keypriv)
         ted = (
             '''<TED version="1.0">{}<FRMT algoritmo="SHA1withRSA">{}\
 </FRMT></TED>''').format(ddxml, frmt)
@@ -1073,9 +965,12 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
 '<Documento_ID>', doc_id).replace('</Documento_ID>', '</Documento>')
         envelope_efact = self.convert_encoding(xml_pret, 'ISO-8859-1')
         envelope_efact = self.create_template_doc(envelope_efact)
-        einvoice = self.sign_full_xml(
-            envelope_efact, signature_d['priv_key'],
-            self.split_cert(certp), doc_id_number)
+        einvoice = self.env['account.invoice'].sign_full_xml(
+                envelope_efact,
+                signature_d['priv_key'],
+                self.split_cert(certp),
+                doc_id_number,
+            )
         self.sii_xml_request = einvoice
 
     @api.multi
@@ -1122,9 +1017,12 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             resol_data['dte_resolution_number'],
             self.time_stamp(), dtes, signature_d,SubTotDTE )
         envio_dte  = self.create_template_env(dtes)
-        envio_dte = self.sign_full_xml(
-            envio_dte, signature_d['priv_key'], certp,
-            'SetDoc', 'env')
+        envio_dte = self.env['account.invoice'].sign_full_xml(
+            envio_dte.replace('<?xml version="1.0" encoding="ISO-8859-1"?>\n', ''),
+            signature_d['priv_key'],
+            certp,
+            'SetDoc',
+            'env')
         result = self.send_xml_file(envio_dte, file_name, company_id)
         if result:
             for rec in self:
