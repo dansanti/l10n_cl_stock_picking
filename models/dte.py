@@ -87,11 +87,6 @@ try:
 except ImportError:
     _logger.info('Cannot import SOOAPpy')
 
-try:
-    from signxml import xmldsig, methods
-except ImportError:
-    _logger.info('Cannot import signxml')
-
 # timbre patrón. Permite parsear y formar el
 # ordered-dict patrón corespondiente al documento
 timbre  = """<TED version="1.0"><DD><RE>99999999-9</RE><TD>11</TD><F>1</F>\
@@ -194,44 +189,6 @@ class stock_picking(models.Model):
 
     '''
     Funcion usada en autenticacion en SII
-    Obtencion de la semilla desde el SII.
-    Basada en función de ejemplo mostrada en el sitio edreams.cl
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2015-04-01
-    '''
-    def get_seed(self, company_id):
-        #En caso de que haya un problema con la validación de certificado del sii ( por una mala implementación de ellos)
-        #esto omite la validacion
-        try:
-            import ssl
-            ssl._create_default_https_context = ssl._create_unverified_context
-        except:
-            pass
-        url = server_url[company_id.dte_service_provider] + 'CrSeed.jws?WSDL'
-        ns = 'urn:'+server_url[company_id.dte_service_provider] + 'CrSeed.jws'
-        _server = SOAPProxy(url, ns)
-        root = etree.fromstring(_server.getSeed())
-        semilla = root[0][0].text
-        return semilla
-
-    '''
-    Funcion usada en autenticacion en SII
-    Creacion de plantilla xml para realizar el envio del token
-    Previo a realizar su firma
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2016-06-01
-    '''
-    def create_template_seed(self, seed):
-        xml = u'''<getToken>
-<item>
-<Semilla>{}</Semilla>
-</item>
-</getToken>
-'''.format(seed)
-        return xml
-
-    '''
-    Funcion usada en autenticacion en SII
     Creacion de plantilla xml para envolver el DTE
     Previo a realizar su firma (1)
      @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
@@ -273,78 +230,17 @@ version="1.0">
         xml = doc.replace('</EnvioDTE>', '') + sign + '</EnvioDTE>'
         return xml
 
-    '''
-    Funcion usada en autenticacion en SII
-    Firma de la semilla utilizando biblioteca signxml
-    De autoria de Andrei Kislyuk https://github.com/kislyuk/signxml
-    (en este caso particular esta probada la efectividad de la libreria)
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2016-06-01
-    '''
+    def create_template_seed(self, seed):
+        return self.env['account.invoice'].create_template_seed(seed)
+
+    def get_seed(self, company_id):
+        return self.env['account.invoice'].get_seed(company_id)
+
     def sign_seed(self, message, privkey, cert):
-        doc = etree.fromstring(message)
-        signed_node = xmldsig(
-            doc, digest_algorithm=u'sha1').sign(
-            method=methods.enveloped, algorithm=u'rsa-sha1',
-            key=privkey.encode('ascii'),
-            cert=cert)
-        msg = etree.tostring(
-            signed_node, pretty_print=True).replace('ds:', '')
-        return msg
+        return self.env['account.invoice'].sign_seed(message, privkey, cert)
 
-    '''
-    Funcion usada en autenticacion en SII
-    Obtencion del token a partir del envio de la semilla firmada
-    Basada en función de ejemplo mostrada en el sitio edreams.cl
-     @author: Daniel Blanco Martin (daniel[at]blancomartin.cl)
-     @version: 2016-06-01
-    '''
-    def get_token(self, seed_file,company_id):
-        url = server_url[company_id.dte_service_provider] + 'GetTokenFromSeed.jws?WSDL'
-        ns = 'urn:'+ server_url[company_id.dte_service_provider] +'GetTokenFromSeed.jws'
-        _server = SOAPProxy(url, ns)
-        tree = etree.fromstring(seed_file)
-        ss = etree.tostring(tree, pretty_print=True, encoding='iso-8859-1')
-        respuesta = etree.fromstring(_server.getToken(ss))
-        token = respuesta[0][0].text
-        return token
-
-    def ensure_str(self,x, encoding="utf-8", none_ok=False):
-        if none_ok is True and x is None:
-            return x
-        if not isinstance(x, str):
-            x = x.decode(encoding)
-        return x
-
-    def long_to_bytes(self, n, blocksize=0):
-        """long_to_bytes(n:long, blocksize:int) : string
-        Convert a long integer to a byte string.
-        If optional blocksize is given and greater than zero, pad the front of the
-        byte string with binary zeros so that the length is a multiple of
-        blocksize.
-        """
-        # after much testing, this algorithm was deemed to be the fastest
-        s = b''
-        n = long(n)  # noqa
-        import struct
-        pack = struct.pack
-        while n > 0:
-            s = pack(b'>I', n & 0xffffffff) + s
-            n = n >> 32
-        # strip off leading zeros
-        for i in range(len(s)):
-            if s[i] != b'\000'[0]:
-                break
-        else:
-            # only happens when n == 0
-            s = b'\000'
-            i = 0
-        s = s[i:]
-        # add back some pad bytes.  this could be done more efficiently w.r.t. the
-        # de-padding being done above, but sigh...
-        if blocksize > 0 and len(s) % blocksize:
-            s = (blocksize - len(s) % blocksize) * b'\000' + s
-        return s
+    def get_token(self, seed_file, company_id):
+        return self.env['account.invoice'].get_token(seed_file, company_id)
 
     def get_digital_signature_pem(self, comp_id):
         obj = user = self[0].responsable_envio
