@@ -240,7 +240,7 @@ class StockPicking(models.Model):
             key = _Mapping(quant.product_id, quant.package_id, quant.owner_id, quant.location_id, computed_putaway_locations[quant.product_id])
             form_name = '[' + quant.product_id.default_code +'] ' + quant.product_id.name if quant.product_id.default_code else quant.product_id.name
             price_unit = quant.product_id.lst_price if quant.price_unit == 0 else quant.price_unit
-            qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': name,'price_unit': price_unit}])
+            qtys_grouped.extend([{'key': key,'value': quant.qty, 'name': form_name,'price_unit': price_unit}])
             if quant.product_id.tracking != 'none' and quant.lot_id:
                 lots_grouped.setdefault(key, dict()).setdefault(quant.lot_id.id, 0.0)
                 lots_grouped[key][quant.lot_id.id] += quant.qty
