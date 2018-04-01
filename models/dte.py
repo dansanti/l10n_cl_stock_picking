@@ -693,6 +693,10 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
         if RutEmisor != result['TED']['DD']['CAF']['DA']['RE']:
             raise UserError(_('NO coincide el Dueño del CAF : %s con el emisor Seleccionado: %s' %(result['TED']['DD']['CAF']['DA']['RE'], RutEmisor)))
         dte = result['TED']['DD']
+        timestamp = self.time_stamp()
+        if date( int(timestamp[:4]), int(timestamp[5:7]), int(timestamp[8:10])) < date(int(self.date[:4]), int(self.date[5:7]), int(self.date[8:10])):
+            raise UserError("La fecha de timbraje no puede ser menor a la fecha de emisión del documento")
+        dte['TSTED'] = timestamp
         dicttoxml.set_debug(False)
         ddxml = '<DD>'+dicttoxml.dicttoxml(
             dte, root=False, attr_type=False).replace(
@@ -702,21 +706,9 @@ www.sii.cl'''.format(folio, folio_inicial, folio_final)
             ' algoritmo="SHA1withRSA">').replace(
             '<key name="#text">','').replace(
             '</key>','').replace('<CAF>','<CAF version="1.0">')+'</DD>'
-        ddxml = self.convert_encoding(ddxml, 'utf-8')
-        keypriv = (resultcaf['AUTORIZACION']['RSASK']).encode(
-            'latin-1').replace('\t','')
-        keypub = (resultcaf['AUTORIZACION']['RSAPUBK']).encode(
-            'latin-1').replace('\t','')
-        #####
-        ## antes de firmar, formatear
+        keypriv = resultcaf['AUTORIZACION']['RSASK'].replace('\t','')
         root = etree.XML( ddxml )
-        ##
-        # formateo sin remover indents
         ddxml = etree.tostring(root)
-        timestamp = self.time_stamp()
-        if date( int(timestamp[:4]), int(timestamp[5:7]), int(timestamp[8:10])) < date(int(self.min_date[:4]), int(self.min_date[5:7]), int(self.min_date[8:10])):
-            raise UserError("La fecha de timbraje no puede ser menor a la fecha de emisión del documento")
-        ddxml = ddxml.replace('2014-04-24T12:02:20', timestamp)
         frmt = self.signmessage(ddxml, keypriv)
         ted = (
             '''<TED version="1.0">{}<FRMT algoritmo="SHA1withRSA">{}\
