@@ -103,12 +103,6 @@ connection_status = {
 class stock_picking(models.Model):
     _inherit = "stock.picking"
 
-    def split_cert(self, cert):
-        certf, j = '', 0
-        for i in range(0, 29):
-            certf += cert[76 * i:76 * (i + 1)] + '\n'
-        return certf
-
     def create_template_envio(self, RutEmisor, RutReceptor, FchResol, NroResol,
                               TmstFirmaEnv, EnvioDTE,signature_d,SubTotDTE):
         xml = '''<SetDTE ID="SetDoc">
@@ -751,8 +745,6 @@ version="1.0">
         envelope_efact = self.create_template_doc(xml_pret)
         einvoice = self.env['account.invoice'].sign_full_xml(
                 envelope_efact,
-                signature_d['priv_key'],
-                self.split_cert(certp),
                 doc_id_number,
             )
         self.sii_xml_dte = einvoice
@@ -799,10 +791,8 @@ version="1.0">
             resol_data['dte_resolution_number'],
             self.time_stamp(), dtes, signature_d,SubTotDTE )
         envio_dte  = self.create_template_env(dtes)
-        envio_dte = self.env['account.invoice'].sign_full_xml(
+        envio_dte = self.env['account.invoice'].sudo(self.env.user.id).with_context({'company_id': company_id.id}).sign_full_xml(
             envio_dte.replace('<?xml version="1.0" encoding="ISO-8859-1"?>\n', ''),
-            signature_d['priv_key'],
-            certp,
             'SetDoc',
             'env')
         result = self.send_xml_file(envio_dte, file_name, company_id)
@@ -884,7 +874,6 @@ version="1.0">
                 return
             raise UserError(connection_status[response.e])
         if not self.sii_send_ident:
-            _logger.info(self.sii_document_number)
             msg = 'No se ha enviado aún el documento %s, aún está en cola de envío interna en odoo'
             if silent:
                 _logger.info(msg)
