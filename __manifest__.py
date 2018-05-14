@@ -30,6 +30,6 @@
         "views/account_invoice.xml",
         'wizard/masive_send_dte.xml',
     ],
-    'version': '0.7.13',
+    'version': '0.8.0',
     'application': True,
 }
