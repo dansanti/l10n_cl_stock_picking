@@ -14,13 +14,13 @@ class PickingToInvoiceD(models.Model):
     @api.depends('partner_id')
     @api.onchange('partner_id')
     def _get_pending_pickings(self ):
-        if not self.partner_id:
-            return
         for inv in self:
+            if not self.partner_id:
+                continue
             if inv.type in ['out_invoice']:
                 mes_antes = 0
                 if inv.date_invoice:
-                    date_invoice = datetime.strptime( self.date_invoice, '%Y-%m-%d' )
+                    date_invoice = datetime.strptime( inv.date_invoice, '%Y-%m-%d' )
                     fecha_inicio = "%s-%s-01 00:00:00" % (date_invoice.year, date_invoice.month)
                     fecha_final = "%s-%s-11 00:00:00" % (date_invoice.year, date_invoice.month)
                     if date_invoice.day == 10:
