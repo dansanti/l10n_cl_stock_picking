@@ -708,7 +708,7 @@ version="1.0">
 
     def _get_dte_status(self):
         for r in self:
-            if not r.sii_xml_request or r.sii_xml_request.state not in ['Enviado', 'Reparo']:
+            if not r.sii_xml_request or r.sii_xml_request.state not in ['Aceptado', 'Reparo']:
                 continue
             partner_id = r.partner_id or r.company_id.partner_id
             token = r.sii_xml_request.get_token(self.env.user, r.company_id)
