@@ -15,7 +15,7 @@ class PickingToInvoiceD(models.Model):
     @api.onchange('partner_id')
     def _get_pending_pickings(self ):
         for inv in self:
-            if not self.partner_id:
+            if not inv.partner_id or inv.type in ['out_refund', 'in_refund', 'in_invoice']:
                 continue
             if inv.type in ['out_invoice']:
                 mes_antes = 0
